@@ -58,7 +58,6 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define adc_values 0
 #define zero_crossing_detection_Pin GPIO_PIN_0
 #define zero_crossing_detection_GPIO_Port GPIOC
 #define zero_crossing_detection_EXTI_IRQn EXTI0_IRQn
