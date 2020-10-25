@@ -78,14 +78,14 @@ typedef struct
 } channel_t;
 
 /* Flags */
-uint8_t flag_update_working_parameters_pending = 0;
+bool update_working_parameters_pending_flag = false;
+bool modbus_request_pending_flag = false;
 
 /* Global variables */
 uint32_t gate_pulse_delay_counter_us = 0;
 uint32_t update_parameter_timer_counter_us = 0;
 uint32_t rx_time_interval_counter = 0;
 sensors_t sensor_values;
-bool modbus_request_pending_flag = false;
 int16_t temperature_error_state = TEMPERATURE_STATUS_NO_ERROR;
 uint8_t incoming_modbus_frame[RS_RX_BUFFER_SIZE];
 uint16_t modbus_frame_byte_counter = 0;
@@ -150,7 +150,7 @@ void update_working_parameters()
 		channel_array[i].activation_delay_us = get_gate_delay_us(channel_array[i].output_voltage_decpercent);
 	}
 
-	flag_update_working_parameters_pending = 0;
+	update_working_parameters_pending_flag = false;
 
 }
 
@@ -243,7 +243,7 @@ void set_gate_state(channel_t * fan, gate_state_t pulse_state)
 
 	if (pulse_state != GATE_ACTIVE)
 	{
-		HAL_GPIO_WritePin(GPIOC, fan->gate_pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(GPIOC, fan->gate_pin, GPIO_PIN_SET);
 	}
 }
 
@@ -362,15 +362,34 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, 6);
 
+	rs485_init();
+	update_working_parameters();
+	modbus_init(modbus_registers);
+	init_modbus_registers();
+
   /* USER CODE END 2 */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
   while (1)
   {
-	if (flag_update_working_parameters_pending == 1)
+	if (update_working_parameters_pending_flag == true)
 	{
 		update_working_parameters();
+	}
+
+	if (modbus_request_pending_flag == true)
+	{
+		update_modbus_registers();
+		int8_t request_type = modbus_process_frame(incoming_modbus_frame, modbus_frame_byte_counter);
+
+		if (request_type == REQUEST_TYPE_WRITE)
+		{
+			update_app_data();
+		}
+
+		modbus_request_pending_flag = false;
+		modbus_frame_byte_counter = 0;
 	}
 	  // UART TESTING
 	//	  HAL_StatusTypeDef status;
@@ -698,13 +717,50 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+/**
+  * @brief This function handles EXTI line0 interrupt.
+  */
+// AC zero crossing detection handler
+void EXTI0_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI0_IRQn 0 */
+
+	if (gate_pulse_delay_counter_us > HALF_SINE_PERIOD_US - 500)
+	{
+		gate_pulse_delay_counter_us = 0;
+	}
+  /* USER CODE END EXTI0_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
+  /* USER CODE BEGIN EXTI0_IRQn 1 */
+
+  /* USER CODE END EXTI0_IRQn 1 */
+}
+
+
 /* Timer 2 overflow interrupt callback */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if (htim->Instance == TIM2)
 	{
-		HAL_GPIO_TogglePin(GPIOD, LED_G_Pin);
-		HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, 6);
+		drive_fans();
+
+		if(update_parameter_timer_counter_us >= WORKING_PARAMETERS_UPDATE_PERIOD_US)
+		{
+			HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, 6);
+			update_parameter_timer_counter_us = 0;
+		}
+
+		gate_pulse_delay_counter_us += MAIN_TIMER_RESOLUTION_US;
+		update_parameter_timer_counter_us += MAIN_TIMER_RESOLUTION_US;
+		rx_time_interval_counter += MAIN_TIMER_RESOLUTION_US;
+
+		if ( (rx_time_interval_counter > MAX_TIME_BETWEEN_MODBUS_FRAMES_US) && (!rs485_rx_buffer_empty()) )
+		{
+			rs485_get_frame(incoming_modbus_frame, RS_RX_BUFFER_SIZE);
+			modbus_request_pending_flag = true;
+		}
+
+
 	}
 }
 
@@ -712,7 +768,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
   printf("%s\n", "ADC conversion finished");
-  flag_update_working_parameters_pending = 1;
+  update_working_parameters_pending_flag = true;
 }
 
 /* UART RX finished callback */
