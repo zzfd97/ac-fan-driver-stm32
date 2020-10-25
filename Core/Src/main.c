@@ -106,9 +106,11 @@ static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM2_Init(void);
+extern void initialise_monitor_handles(void);
 /* USER CODE BEGIN PFP */
 
 /* FUNCTION PROTOTYPES */
+
 
 void drive_fans(void);
 uint32_t get_gate_delay_us(uint16_t output_power);
@@ -127,7 +129,7 @@ void update_app_data(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-extern void initialise_monitor_handles(void);
+
 
 void update_working_parameters()
 {
@@ -362,7 +364,7 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, 6);
 
-	rs485_init();
+	rs485_init(&huart1);
 	update_working_parameters();
 	modbus_init(modbus_registers);
 	init_modbus_registers();
@@ -373,6 +375,16 @@ int main(void)
 
   while (1)
   {
+	// EXPERIMENTAL AREA
+	  while (1)
+	  {
+		  char array1[20] = "AlaMaKota";
+		  rs485_transmit_byte_array(array1, 20);
+		  HAL_Delay(1000);
+	  }
+
+	// EXPERIMENTAL AREA END
+
 	if (update_working_parameters_pending_flag == true)
 	{
 		update_working_parameters();
@@ -616,7 +628,7 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
+  huart1.Init.BaudRate = 9600;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
@@ -775,6 +787,12 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	printf("%s", "UART RX complete");
+}
+
+/* UART TX finished callback */
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+	transmitter_disable(); // disable dir pin after RS485 transmission is finished
 }
 
 /* USER CODE END 4 */

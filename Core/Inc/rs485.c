@@ -15,24 +15,25 @@ uint8_t uart_rx_buffer[RS_RX_BUFFER_SIZE];
 uint8_t * tx_buffer_pointer = uart_tx_buffer;
 uint8_t * rx_buffer_pointer = uart_rx_buffer;
 uint16_t bytes_to_transmit = 0;
+UART_HandleTypeDef * uart_handler;
 
 /* FUNCTION DEFINITIONS */
-void rs485_init(void)
+void rs485_init(UART_HandleTypeDef * uart_handler_ptr)
 {
-// TODO
+	uart_handler = uart_handler_ptr;
 }
 
-void transmit_byte(uint8_t data)
-{
-// TODO
-}
 
 void rs485_transmit_byte_array(uint8_t * byte_array, uint16_t array_size)
 {
+	printf ("%s\n", "Transmitting byte array");
 	transmitter_enable();
-	memcpy(uart_tx_buffer, byte_array, array_size);
-	bytes_to_transmit = array_size;
-	rs485_transmit_from_buffer();
+	HAL_StatusTypeDef status = HAL_UART_Transmit_IT(uart_handler, byte_array, array_size);
+	if (status != HAL_OK)
+	{
+	  printf ("%s \n", "Cannot send buffer");
+	}
+
 }
 
 void transmitter_enable(void)
@@ -42,23 +43,9 @@ void transmitter_enable(void)
 
 void transmitter_disable(void)
 {
-	HAL_GPIO_WritePin(rs_dir_GPIO_Port, rs_dir_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(rs_dir_GPIO_Port, rs_dir_Pin, GPIO_PIN_RESET);
 }
 
-void rs485_transmit_from_buffer(void)
-{
-	if (bytes_to_transmit > (tx_buffer_pointer-uart_tx_buffer))
-	{
-		transmit_byte(*tx_buffer_pointer);
-		tx_buffer_pointer++;
-	}
-	else
-	{
-		transmitter_disable();
-		bytes_to_transmit = 0;
-		tx_buffer_pointer = uart_tx_buffer;
-	}
-}
 
 bool rs485_ready_to_send(void)
 {
