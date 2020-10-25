@@ -19,6 +19,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "ntc.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -40,16 +41,19 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+/* Peripheral handler variables */
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
-
 TIM_HandleTypeDef htim2;
-
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 
-uint16_t adcBuffer[6];
+/* Flags */
+uint8_t flag_update_working_parameters_pending = 0;
+
+/* Global variables */
+sensors_t sensor_values;
 
 /* USER CODE END PV */
 
@@ -67,6 +71,19 @@ static void MX_TIM2_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 extern void initialise_monitor_handles(void);
+
+void update_working_parameters()
+{
+	printf("%s", "Updating working parameters\n");
+	HAL_GPIO_TogglePin(GPIOD, LED_G_Pin);
+	ntc_calculate_temperatures(&sensor_values);
+	for (int channel = 0; channel < ADC_SENSOR_NUMBER; channel++)
+	{
+	  printf("CH%d val: %d, temp: %d\n", channel, sensor_values.adc_values[channel], sensor_values.temperatures[channel]);
+	}
+	flag_update_working_parameters_pending = 0;
+}
+
 
 /* USER CODE END 0 */
 
@@ -94,7 +111,6 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -104,32 +120,35 @@ int main(void)
   MX_USART1_UART_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start_IT(&htim2);
-  printf ("%s \n", "Program start");
-  /* USER CODE END 2 */
 
+  HAL_TIM_Base_Start_IT(&htim2);
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, 6);
+
+  /* USER CODE END 2 */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcBuffer, 6);
 
   while (1)
   {
-	  HAL_StatusTypeDef status;
-	  char string_to_send[] = "Sample_texts";
-	  printf ("%s \n", "Sending char");
-	  status = HAL_UART_Transmit_IT(&huart1, &string_to_send, 12);
-	  if (status != HAL_OK)
-	  {
-		  printf ("%s \n", "Error");
-	  }
+	if (flag_update_working_parameters_pending == 1)
+	{
+		update_working_parameters();
+	}
+	  // UART TESTING
+	//	  HAL_StatusTypeDef status;
+	//	  char string_to_send[] = "Sample_texts";
+	//	  printf ("%s \n", "Sending char");
+	//	  status = HAL_UART_Transmit_IT(&huart1, &string_to_send, 12);
+	//	  if (status != HAL_OK)
+	//	  {
+	//		  printf ("%s \n", "Error");
+	//	  }
+	//	  uint8_t received_byte;
+	//	  HAL_UART_Receive_IT(&huart1, &received_byte, 1);
+	//	  HAL_Delay(1000);
+	//	  printf ("%s %c \n", "Received: ", received_byte);
+	//
 
-	  uint8_t received_byte;
-	  HAL_UART_Receive_IT(&huart1, &received_byte, 1);
-
-	  HAL_Delay(1000);
-
-	  printf ("%s %c \n", "Received: ", received_byte);
-//
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -441,24 +460,25 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
-{
-  for (int channel = 0; channel < 6; channel++)
-  {
-	  printf("CH%d: %d\n", channel, adcBuffer[channel]);
-  }
-}
-
-
+/* Timer 2 overflow interrupt callback */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if (htim->Instance == TIM2)
 	{
-		printf("%s", "Tim2 elapsed");
-		HAL_GPIO_TogglePin(GPIOD, LED_R_Pin);
+//		printf("%s", "Timer 2 callback\n");
+		HAL_GPIO_TogglePin(GPIOD, LED_G_Pin);
+		HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, 6);
 	}
 }
 
+/* ADC conversion finished callback */
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+{
+  printf("%s\n", "ADC conversion finished");
+  flag_update_working_parameters_pending = 1;
+}
+
+/* UART RX finished callback */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	printf("%s", "UART RX complete");
