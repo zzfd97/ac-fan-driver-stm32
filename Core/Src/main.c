@@ -114,28 +114,21 @@ int main(void)
 
   while (1)
   {
-//	  HAL_StatusTypeDef status;
-//	  uint8_t data = 'a';
-//	  printf ("%s \n", "Sending char");
-////	  status = HAL_UART_Transmit(&huart1, &data, 1, 100000);
-//	  if (status != HAL_OK)
-//	  {
-//		  printf ("%s \n", "Error");
-//	  }
+	  HAL_StatusTypeDef status;
+	  char string_to_send[] = "Sample_texts";
+	  printf ("%s \n", "Sending char");
+	  status = HAL_UART_Transmit_IT(&huart1, &string_to_send, 12);
+	  if (status != HAL_OK)
+	  {
+		  printf ("%s \n", "Error");
+	  }
+
+	  uint8_t received_byte;
+	  HAL_UART_Receive_IT(&huart1, &received_byte, 1);
 
 	  HAL_Delay(1000);
 
-	  // LED BLINK
-//	  HAL_GPIO_WritePin(GPIOD, LED_R_Pin, GPIO_PIN_SET);
-//	  HAL_Delay(100);
-//	  HAL_GPIO_WritePin(GPIOD, LED_R_Pin, GPIO_PIN_RESET);
-
-//	HAL_GPIO_WritePin(GPIOD, LED_R_Pin, GPIO_PIN_SET);
-//	HAL_GPIO_WritePin(GPIOC, gate_1_Pin, GPIO_PIN_SET);
-//	HAL_Delay(1000);
-//	HAL_GPIO_WritePin(GPIOD, LED_G_Pin, GPIO_PIN_RESET);
-//	HAL_GPIO_WritePin(GPIOD, LED_R_Pin, GPIO_PIN_RESET);
-//	HAL_GPIO_WritePin(GPIOC, gate_1_Pin, GPIO_PIN_RESET);
+	  printf ("%s %c \n", "Received: ", received_byte);
 //
     /* USER CODE END WHILE */
 
@@ -307,7 +300,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 9999;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 10000;
+  htim2.Init.Period = 9999;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -400,7 +393,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, gate_1_Pin|gate_2_Pin|gate_3_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, LED_R_Pin|LED_G_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOD, LED_G_Pin|LED_R_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : zero_crossing_detection_Pin */
   GPIO_InitStruct.Pin = zero_crossing_detection_Pin;
@@ -415,8 +408,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LED_R_Pin LED_G_Pin */
-  GPIO_InitStruct.Pin = LED_R_Pin|LED_G_Pin;
+  /*Configure GPIO pins : LED_G_Pin LED_R_Pin */
+  GPIO_InitStruct.Pin = LED_G_Pin|LED_R_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -449,13 +442,16 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	if (htim->Instance == htim2)
+	if (htim->Instance == TIM2)
 	{
 		printf("%s", "Tim2 elapsed");
 		HAL_GPIO_TogglePin(GPIOD, LED_R_Pin);
 	}
+}
 
-
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	printf("%s", "UART RX complete");
 }
 
 /* USER CODE END 4 */
