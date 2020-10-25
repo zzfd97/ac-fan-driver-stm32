@@ -110,8 +110,6 @@ extern void initialise_monitor_handles(void);
 /* USER CODE BEGIN PFP */
 
 /* FUNCTION PROTOTYPES */
-
-
 void drive_fans(void);
 uint32_t get_gate_delay_us(uint16_t output_power);
 void gpio_init(void);
@@ -333,45 +331,45 @@ void update_app_data(void)
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
+	/* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
+	/* USER CODE END 1 */
 
-  /* MCU Configuration--------------------------------------------------------*/
+	/* MCU Configuration--------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	HAL_Init();
 
-  /* USER CODE BEGIN Init */
-  initialise_monitor_handles();
+	/* USER CODE BEGIN Init */
+	initialise_monitor_handles(); // needed for debug semihosting
 
-  /* USER CODE END Init */
+	/* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+	/* Configure the system clock */
+	SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
-  /* USER CODE END SysInit */
+	/* USER CODE BEGIN SysInit */
+	/* USER CODE END SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_ADC1_Init();
-  MX_USART1_UART_Init();
-  MX_TIM2_Init();
-  /* USER CODE BEGIN 2 */
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_DMA_Init();
+	MX_ADC1_Init();
+	MX_USART1_UART_Init();
+	MX_TIM2_Init();
+	/* USER CODE BEGIN 2 */
 
-  HAL_TIM_Base_Start_IT(&htim2);
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, 6);
+	HAL_TIM_Base_Start_IT(&htim2);
+	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, 6);
 
 	rs485_init(&huart1);
 	update_working_parameters();
 	modbus_init(modbus_registers);
 	init_modbus_registers();
 
-  /* USER CODE END 2 */
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+	/* USER CODE END 2 */
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
 
   while (1)
   {
