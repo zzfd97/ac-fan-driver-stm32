@@ -27,7 +27,8 @@ Core/Src/system_stm32f4xx.o: ../Core/Src/system_stm32f4xx.c \
  C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h \
  C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h \
  C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h \
- C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h
+ C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
+ C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h
 
 C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h:
 
@@ -86,3 +87,5 @@ C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM
 C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:
 
 C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h:
+
+C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:

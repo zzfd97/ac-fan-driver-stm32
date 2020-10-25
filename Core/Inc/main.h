@@ -79,10 +79,10 @@ void Error_Handler(void);
 #define ntc_5_GPIO_Port GPIOA
 #define ntc_6_Pin GPIO_PIN_5
 #define ntc_6_GPIO_Port GPIOA
-#define LED_R_Pin GPIO_PIN_12
-#define LED_R_GPIO_Port GPIOD
-#define LED_G_Pin GPIO_PIN_14
+#define LED_G_Pin GPIO_PIN_12
 #define LED_G_GPIO_Port GPIOD
+#define LED_R_Pin GPIO_PIN_14
+#define LED_R_GPIO_Port GPIOD
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

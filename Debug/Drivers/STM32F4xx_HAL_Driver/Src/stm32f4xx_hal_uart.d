@@ -1,5 +1,5 @@
-Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.o: \
- ../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c \
+Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.o: \
+ ../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c \
  C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h \
  C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/stm32f4xx_hal_conf.h \
  C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h \
