@@ -19,7 +19,13 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "ntc.h"
+#include <stdbool.h>
+#include <math.h>
+#include <config.h>
+#include <ntc.h>
+#include <rs485.h>
+#include <modbus.h>
+
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -38,6 +44,9 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 
+#define WORK_STATE_MANUAL 0
+#define WORK_STATE_AUTO 1
+
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -49,11 +58,44 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 
+/* Types */
+
+typedef enum
+{
+	GATE_IDLE,
+	GATE_ACTIVE,
+} gate_state_t;
+
+typedef struct
+{
+	uint32_t gate_pin;
+	const uint8_t temp_sensor_index;
+	uint8_t work_state;
+	int16_t setpoint;
+	int16_t output_voltage_decpercent;
+	uint32_t activation_delay_us; // time from zero-crossing to gate activation
+	gate_state_t state;
+} channel_t;
+
 /* Flags */
 uint8_t flag_update_working_parameters_pending = 0;
 
 /* Global variables */
+uint32_t gate_pulse_delay_counter_us = 0;
+uint32_t update_parameter_timer_counter_us = 0;
+uint32_t rx_time_interval_counter = 0;
 sensors_t sensor_values;
+bool modbus_request_pending_flag = false;
+int16_t temperature_error_state = TEMPERATURE_STATUS_NO_ERROR;
+uint8_t incoming_modbus_frame[RS_RX_BUFFER_SIZE];
+uint16_t modbus_frame_byte_counter = 0;
+static struct register_t modbus_registers[REGISTERS_NUMBER];
+static channel_t channel_array[OUTPUT_CHANNELS_NUMBER] = {
+	{gate_1_Pin, 0, WORK_STATE_AUTO, INIT_CHANNEL_SETPOINT_C, 0, 0, GATE_IDLE},
+	{gate_2_Pin, 1, WORK_STATE_AUTO, INIT_CHANNEL_SETPOINT_C, 0, 0, GATE_IDLE},
+	{gate_3_Pin, 2, WORK_STATE_AUTO, INIT_CHANNEL_SETPOINT_C, 0, 0, GATE_IDLE}
+};
+
 
 /* USER CODE END PV */
 
@@ -65,6 +107,21 @@ static void MX_ADC1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
+
+/* FUNCTION PROTOTYPES */
+
+void drive_fans(void);
+uint32_t get_gate_delay_us(uint16_t output_power);
+void gpio_init(void);
+void interrupt_init(void);
+void led_blink(uint8_t count, uint32_t on_off_cycle_period_ms);
+int16_t pi_regulator(uint8_t channel, int16_t current_temp, int16_t target_temperature);
+void set_gate_state(channel_t * fan, gate_state_t pulse_state);
+void timer_start(uint32_t time_us);
+void update_working_parameters(void);
+void init_modbus_registers(void);
+void update_modbus_registers(void);
+void update_app_data(void);
 
 /* USER CODE END PFP */
 
@@ -81,8 +138,189 @@ void update_working_parameters()
 	{
 	  printf("CH%d val: %d, temp: %d\n", channel, sensor_values.adc_values[channel], sensor_values.temperatures[channel]);
 	}
+
+	temperature_error_state = check_temperatures(&sensor_values);
+
+	for (uint8_t i = 0; i < OUTPUT_CHANNELS_NUMBER; i++)
+	{
+		if (channel_array[i].work_state == WORK_STATE_AUTO)
+		{
+			channel_array[i].output_voltage_decpercent = pi_regulator(i, sensor_values.temperatures[i], channel_array[i].setpoint);
+		}
+		channel_array[i].activation_delay_us = get_gate_delay_us(channel_array[i].output_voltage_decpercent);
+	}
+
 	flag_update_working_parameters_pending = 0;
+
 }
+
+
+void drive_fans(void)
+{
+	for (uint8_t i = 0; i < OUTPUT_CHANNELS_NUMBER; i++)
+	{
+		if (channel_array[i].output_voltage_decpercent < MIN_OUTPUT_VOLTAGE_DECPERCENT)
+		{
+			set_gate_state(&channel_array[i], GATE_IDLE); // full off
+		}
+
+		else if (channel_array[i].output_voltage_decpercent >= MAX_OUTPUT_VOLTAGE_DECPERCENT)
+		{
+			set_gate_state(&channel_array[i], GATE_ACTIVE); // full on
+		}
+
+		else if ( (gate_pulse_delay_counter_us >= channel_array[i].activation_delay_us) && (gate_pulse_delay_counter_us < (channel_array[i].activation_delay_us + GATE_PULSE_MIN_TIME_US)) )
+		{
+			set_gate_state(&channel_array[i], GATE_ACTIVE);
+		}
+		else
+		{
+			set_gate_state(&channel_array[i], GATE_IDLE);
+		}
+	}
+}
+
+
+uint32_t get_gate_delay_us(uint16_t output_voltage_percent)
+{
+	uint16_t mean_voltage = (output_voltage_percent*23)/100;
+	double activation_angle_rad = acos(mean_voltage/230.0); // acos function input is double, value from -1 to 1
+	uint32_t gate_delay = HALF_SINE_PERIOD_US*activation_angle_rad/(PI/2.0);
+
+	if (gate_delay > MAX_GATE_DELAY_US)
+		gate_delay = MAX_GATE_DELAY_US;
+
+	if (gate_delay < MIN_GATE_DELAY_US)
+		gate_delay = MIN_GATE_DELAY_US;
+
+	return gate_delay - ZERO_CROSSING_DETECTION_OFFSET_US;
+}
+
+
+int16_t pi_regulator(uint8_t channel, int16_t current_temp, int16_t setpoint)
+{
+	int16_t error;
+	static int16_t integral_error[3] = {0, 0, 0};
+	int16_t output_voltage_decpercent;
+
+	error = current_temp - setpoint;
+
+	integral_error[channel] = integral_error[channel] + error;
+
+	if ((error>0) && (integral_error[channel] <350*TIME_CONST))
+		integral_error[channel] = 350*TIME_CONST;
+
+	if (integral_error[channel] > INTEGRAL_ERROR_MAX)
+		integral_error[channel] = INTEGRAL_ERROR_MAX;
+	if (integral_error[channel] < INTEGRAL_ERROR_MIN)
+		integral_error[channel] = INTEGRAL_ERROR_MIN;
+
+	output_voltage_decpercent = PI_KP * error  + integral_error[channel]/TIME_CONST;
+
+	if (output_voltage_decpercent > MAX_OUTPUT_VOLTAGE_DECPERCENT)
+		output_voltage_decpercent = FULL_ON_OUTPUT_VOLTAGE_DECPERCENT;
+
+	if (output_voltage_decpercent < MIN_OUTPUT_VOLTAGE_DECPERCENT)
+		output_voltage_decpercent = FULL_OFF_OUTPUT_VOLTAGE_DECPERCENT;
+
+	return output_voltage_decpercent;
+};
+
+
+void set_gate_state(channel_t * fan, gate_state_t pulse_state)
+{
+	if (fan->state == pulse_state)
+	{
+		return; // no state change
+	}
+
+	fan->state = pulse_state;
+
+	if (pulse_state == GATE_ACTIVE)
+	{
+		HAL_GPIO_WritePin(GPIOC, fan->gate_pin, GPIO_PIN_RESET); // optotransistor is active low
+	}
+
+	if (pulse_state != GATE_ACTIVE)
+	{
+		HAL_GPIO_WritePin(GPIOC, fan->gate_pin, GPIO_PIN_RESET);
+	}
+}
+
+
+void init_modbus_registers(void)
+{
+	for (int i = 0; i < REGISTERS_NUMBER; i++)
+	{
+		modbus_registers[i].active = true;
+	}
+}
+
+
+void update_modbus_registers(void)
+{
+	modbus_registers[0].value = channel_array[0].work_state;
+	modbus_registers[1].value = channel_array[1].work_state;
+	modbus_registers[2].value = channel_array[2].work_state;
+	modbus_registers[3].value = channel_array[0].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER;
+	modbus_registers[4].value = channel_array[1].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER;
+	modbus_registers[5].value = channel_array[2].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER;
+	modbus_registers[6].value = channel_array[0].setpoint/TEMPERATURE_PRECISION_MULTIPLIER;
+	modbus_registers[7].value = channel_array[1].setpoint/TEMPERATURE_PRECISION_MULTIPLIER;
+	modbus_registers[8].value = channel_array[2].setpoint/TEMPERATURE_PRECISION_MULTIPLIER;
+	modbus_registers[9].value = sensor_values.temperatures[0]/TEMPERATURE_PRECISION_MULTIPLIER;
+	modbus_registers[10].value = sensor_values.temperatures[1]/TEMPERATURE_PRECISION_MULTIPLIER;
+	modbus_registers[11].value = sensor_values.temperatures[2]/TEMPERATURE_PRECISION_MULTIPLIER;
+	modbus_registers[12].value = sensor_values.temperatures[3]/TEMPERATURE_PRECISION_MULTIPLIER;
+	modbus_registers[13].value = sensor_values.temperatures[4]/TEMPERATURE_PRECISION_MULTIPLIER;
+	modbus_registers[14].value = sensor_values.temperatures[5]/TEMPERATURE_PRECISION_MULTIPLIER;
+	modbus_registers[15].value = temperature_error_state;
+}
+
+
+void update_app_data(void)
+{
+	channel_array[0].work_state = modbus_registers[0].value;
+	channel_array[1].work_state = modbus_registers[1].value;
+	channel_array[2].work_state = modbus_registers[2].value;
+
+	if ((modbus_registers[3].value) != channel_array[0].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER) // check if value changed
+	{
+		channel_array[0].work_state = WORK_STATE_MANUAL;
+		channel_array[0].output_voltage_decpercent = modbus_registers[3].value*VOLTAGE_PRECISION_MULTIPLIER;
+	}
+
+	if ((modbus_registers[4].value) != channel_array[1].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER) // check if value changed
+	{
+		channel_array[1].work_state = WORK_STATE_MANUAL;
+		channel_array[1].output_voltage_decpercent = modbus_registers[4].value*VOLTAGE_PRECISION_MULTIPLIER;
+	}
+
+	if ((modbus_registers[5].value) != channel_array[2].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER) // check if value changed
+	{
+		channel_array[2].work_state = WORK_STATE_MANUAL;
+		channel_array[2].output_voltage_decpercent = modbus_registers[5].value*VOLTAGE_PRECISION_MULTIPLIER;
+	}
+
+	if (modbus_registers[6].value != (channel_array[0].setpoint/TEMPERATURE_PRECISION_MULTIPLIER)) // check if value changed
+	{
+		channel_array[0].work_state = WORK_STATE_AUTO;
+		channel_array[0].setpoint = modbus_registers[6].value*TEMPERATURE_PRECISION_MULTIPLIER;
+	}
+
+	if (modbus_registers[7].value != (channel_array[1].setpoint/TEMPERATURE_PRECISION_MULTIPLIER)) // check if value changed
+	{
+		channel_array[1].work_state = WORK_STATE_AUTO;
+		channel_array[1].setpoint = modbus_registers[7].value*TEMPERATURE_PRECISION_MULTIPLIER;
+	}
+
+	if (modbus_registers[8].value != (channel_array[2].setpoint/TEMPERATURE_PRECISION_MULTIPLIER)) // check if value changed
+	{
+		channel_array[2].work_state = WORK_STATE_AUTO;
+		channel_array[2].setpoint = modbus_registers[8].value*TEMPERATURE_PRECISION_MULTIPLIER;
+	}
+}
+
 
 
 /* USER CODE END 0 */
@@ -315,11 +553,11 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE BEGIN TIM2_Init 1 */
 
-  /* USER CODE END TIM2_Init 1 */
+  /* USER CODE END TIM2_Init 1 */ // currently set as 100ns (1Meg/100/100 = 100n)
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 9999;
+  htim2.Init.Prescaler = 99;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 9999;
+  htim2.Init.Period = 99;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -465,7 +703,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if (htim->Instance == TIM2)
 	{
-//		printf("%s", "Timer 2 callback\n");
 		HAL_GPIO_TogglePin(GPIOD, LED_G_Pin);
 		HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, 6);
 	}
