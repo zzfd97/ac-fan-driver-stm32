@@ -89,7 +89,7 @@ sensors_t sensor_values;
 int16_t temperature_error_state = TEMPERATURE_STATUS_NO_ERROR;
 uint8_t incoming_modbus_frame[RS_RX_BUFFER_SIZE];
 uint16_t modbus_frame_byte_counter = 0;
-static struct register_t modbus_registers[REGISTERS_NUMBER];
+modbus_handler modbus_hdlr;
 static channel_t channel_array[OUTPUT_CHANNELS_NUMBER] = {
 	{gate_1_Pin, 0, WORK_STATE_AUTO, INIT_CHANNEL_SETPOINT_C, 0, 0, GATE_IDLE},
 	{gate_2_Pin, 1, WORK_STATE_AUTO, INIT_CHANNEL_SETPOINT_C, 0, 0, GATE_IDLE},
@@ -253,7 +253,7 @@ void init_modbus_registers(void)
 {
 	for (int i = 0; i < REGISTERS_NUMBER; i++)
 	{
-		modbus_registers[i].active = true;
+		modbus_hdlr.registers[i].active = true;
 	}
 }
 
@@ -261,68 +261,66 @@ void init_modbus_registers(void)
 void update_modbus_registers(void)
 {
 	printf("Updating Modbus registers with data from app before processing request\n");
-	modbus_registers[0].value = channel_array[0].work_state;
-	modbus_registers[1].value = channel_array[1].work_state;
-	modbus_registers[2].value = channel_array[2].work_state;
-	modbus_registers[3].value = channel_array[0].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER;
-	modbus_registers[4].value = channel_array[1].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER;
-	modbus_registers[5].value = channel_array[2].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER;
-	modbus_registers[6].value = channel_array[0].setpoint/TEMPERATURE_PRECISION_MULTIPLIER;
-	modbus_registers[7].value = channel_array[1].setpoint/TEMPERATURE_PRECISION_MULTIPLIER;
-	modbus_registers[8].value = channel_array[2].setpoint/TEMPERATURE_PRECISION_MULTIPLIER;
-	modbus_registers[9].value = sensor_values.temperatures[0]/TEMPERATURE_PRECISION_MULTIPLIER;
-	modbus_registers[10].value = sensor_values.temperatures[1]/TEMPERATURE_PRECISION_MULTIPLIER;
-	modbus_registers[11].value = sensor_values.temperatures[2]/TEMPERATURE_PRECISION_MULTIPLIER;
-	modbus_registers[12].value = sensor_values.temperatures[3]/TEMPERATURE_PRECISION_MULTIPLIER;
-	modbus_registers[13].value = sensor_values.temperatures[4]/TEMPERATURE_PRECISION_MULTIPLIER;
-	modbus_registers[14].value = sensor_values.temperatures[5]/TEMPERATURE_PRECISION_MULTIPLIER;
-	modbus_registers[15].value = temperature_error_state;
+	modbus_hdlr.registers[0].value = channel_array[0].work_state;
+	modbus_hdlr.registers[1].value = channel_array[1].work_state;
+	modbus_hdlr.registers[2].value = channel_array[2].work_state;
+	modbus_hdlr.registers[3].value = channel_array[0].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER;
+	modbus_hdlr.registers[4].value = channel_array[1].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER;
+	modbus_hdlr.registers[5].value = channel_array[2].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER;
+	modbus_hdlr.registers[6].value = channel_array[0].setpoint/TEMPERATURE_PRECISION_MULTIPLIER;
+	modbus_hdlr.registers[7].value = channel_array[1].setpoint/TEMPERATURE_PRECISION_MULTIPLIER;
+	modbus_hdlr.registers[8].value = channel_array[2].setpoint/TEMPERATURE_PRECISION_MULTIPLIER;
+	modbus_hdlr.registers[9].value = sensor_values.temperatures[0]/TEMPERATURE_PRECISION_MULTIPLIER;
+	modbus_hdlr.registers[10].value = sensor_values.temperatures[1]/TEMPERATURE_PRECISION_MULTIPLIER;
+	modbus_hdlr.registers[11].value = sensor_values.temperatures[2]/TEMPERATURE_PRECISION_MULTIPLIER;
+	modbus_hdlr.registers[12].value = sensor_values.temperatures[3]/TEMPERATURE_PRECISION_MULTIPLIER;
+	modbus_hdlr.registers[13].value = sensor_values.temperatures[4]/TEMPERATURE_PRECISION_MULTIPLIER;
+	modbus_hdlr.registers[14].value = sensor_values.temperatures[5]/TEMPERATURE_PRECISION_MULTIPLIER;
+	modbus_hdlr.registers[15].value = temperature_error_state;
 }
 
 
 void update_app_data(void)
 {
 	printf("Updating app data with data from Modbus registers\n");
-	channel_array[0].work_state = modbus_registers[0].value;
-	channel_array[1].work_state = modbus_registers[1].value;
-	channel_array[2].work_state = modbus_registers[2].value;
+	channel_array[0].work_state = modbus_hdlr.registers[0].value;
+	channel_array[1].work_state = modbus_hdlr.registers[1].value;
+	channel_array[2].work_state = modbus_hdlr.registers[2].value;
 
-	if ((modbus_registers[3].value) != channel_array[0].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER) // check if value changed
+	if ((modbus_hdlr.registers[3].value) != channel_array[0].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER) // check if value changed
 	{
-		printf("Setting channel 1 voltage to value %d\n", modbus_registers[3].value); // TODO REMOVE
 		channel_array[0].work_state = WORK_STATE_MANUAL;
-		channel_array[0].output_voltage_decpercent = modbus_registers[3].value*VOLTAGE_PRECISION_MULTIPLIER;
-//		printf("After update: channel 0 output voltage is  %d\n", channel_array[0].output_voltage_decpercent); // TODO REMOVE
+		channel_array[0].output_voltage_decpercent = modbus_hdlr.registers[3].value*VOLTAGE_PRECISION_MULTIPLIER;
 	}
 
-	if ((modbus_registers[4].value) != channel_array[1].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER) // check if value changed
+	if ((modbus_hdlr.registers[4].value) != channel_array[1].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER) // check if value changed
 	{
 		channel_array[1].work_state = WORK_STATE_MANUAL;
-		channel_array[1].output_voltage_decpercent = modbus_registers[4].value*VOLTAGE_PRECISION_MULTIPLIER;
+		channel_array[1].output_voltage_decpercent = modbus_hdlr.registers[4].value*VOLTAGE_PRECISION_MULTIPLIER;
 	}
 
-	if ((modbus_registers[5].value) != channel_array[2].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER) // check if value changed
+	if ((modbus_hdlr.registers[5].value) != channel_array[2].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER) // check if value changed
 	{
 		channel_array[2].work_state = WORK_STATE_MANUAL;
-		channel_array[2].output_voltage_decpercent = modbus_registers[5].value*VOLTAGE_PRECISION_MULTIPLIER;
+		channel_array[2].output_voltage_decpercent = modbus_hdlr.registers[5].value*VOLTAGE_PRECISION_MULTIPLIER;
 	}
 
-	if (modbus_registers[6].value != (channel_array[0].setpoint/TEMPERATURE_PRECISION_MULTIPLIER)) // check if value changed
+	if (modbus_hdlr.registers[6].value != (channel_array[0].setpoint/TEMPERATURE_PRECISION_MULTIPLIER)) // check if value changed
 	{
 		channel_array[0].work_state = WORK_STATE_AUTO;
-		channel_array[0].setpoint = modbus_registers[6].value*TEMPERATURE_PRECISION_MULTIPLIER;
+		channel_array[0].setpoint = modbus_hdlr.registers[6].value*TEMPERATURE_PRECISION_MULTIPLIER;
 	}
 
-	if (modbus_registers[7].value != (channel_array[1].setpoint/TEMPERATURE_PRECISION_MULTIPLIER)) // check if value changed
+	if (modbus_hdlr.registers[7].value != (channel_array[1].setpoint/TEMPERATURE_PRECISION_MULTIPLIER)) // check if value changed
 	{
 		channel_array[1].work_state = WORK_STATE_AUTO;
-		channel_array[1].setpoint = modbus_registers[7].value*TEMPERATURE_PRECISION_MULTIPLIER;
+		channel_array[1].setpoint = modbus_hdlr.registers[7].value*TEMPERATURE_PRECISION_MULTIPLIER;
 	}
 
-	if (modbus_registers[8].value != (channel_array[2].setpoint/TEMPERATURE_PRECISION_MULTIPLIER)) // check if value changed
+	if (modbus_hdlr.registers[8].value != (channel_array[2].setpoint/TEMPERATURE_PRECISION_MULTIPLIER)) // check if value changed
 	{
 		channel_array[2].work_state = WORK_STATE_AUTO;
-		channel_array[2].setpoint = modbus_registers[8].value*TEMPERATURE_PRECISION_MULTIPLIER;
+		channel_array[2].setpoint = modbus_hdlr.registers[8].value*TEMPERATURE_PRECISION_MULTIPLIER;
 	}
 }
 
@@ -369,7 +367,7 @@ int main(void)
 
 	rs485_init(&huart1);
 	update_working_parameters();
-	modbus_init(modbus_registers);
+	modbus_hdlr = modbus_init();
 	init_modbus_registers();
 
 	// TEMPORARY, START RECEIVING BYTES
@@ -755,7 +753,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 	if ( (rx_time_interval_counter > MAX_TIME_BETWEEN_MODBUS_FRAMES_US) && (!rs485_rx_buffer_empty()) )
 	{
-		rs485_get_frame(incoming_modbus_frame, RS_RX_BUFFER_SIZE);
+		rs485_get_complete_frame(incoming_modbus_frame, RS_RX_BUFFER_SIZE);
 		modbus_request_pending_flag = true;
 	}
 }
@@ -774,7 +772,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 	if ( (rx_time_interval_counter > MAX_TIME_BETWEEN_MODBUS_FRAMES_US) && (!rs485_rx_buffer_empty()) )
 	{
-		rs485_get_frame(incoming_modbus_frame, RS_RX_BUFFER_SIZE);
+		rs485_get_complete_frame(incoming_modbus_frame, RS_RX_BUFFER_SIZE);
 		modbus_request_pending_flag = true;
 	}
 	else

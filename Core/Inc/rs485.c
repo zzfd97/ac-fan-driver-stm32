@@ -72,7 +72,7 @@ bool rs485_get_byte_to_buffer(uint8_t * byte)
 		return false;
 }
 
-void rs485_get_frame(uint8_t * dest_array, uint8_t array_size)
+void rs485_get_complete_frame(uint8_t * dest_array, uint8_t array_size)
 {
 	memcpy(dest_array, uart_rx_buffer, array_size);
 	memset(uart_rx_buffer, 0, RS_RX_BUFFER_SIZE);

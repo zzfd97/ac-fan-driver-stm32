@@ -14,21 +14,23 @@ uint8_t get_high_byte(uint16_t two_byte);
 uint8_t get_low_byte(uint16_t two_byte);
 uint16_t get_short_little_endian(uint8_t * first_byte_pointer);
 uint16_t get_short_big_endian(uint8_t * first_byte_pointer);
-bool are_registers_valid(struct register_t * first_register, uint8_t registers_number);
-void send_info_response(struct register_t * first_register, uint8_t registers_number);
-void get_info_registers(struct register_t  * data, uint16_t data_length);
+bool are_registers_valid(modbus_register * first_register, uint8_t registers_number);
+void send_info_response(modbus_register * first_register, uint8_t registers_number);
+void get_info_registers(modbus_register  * data, uint16_t data_length);
 void print_buffer(uint8_t * buffer, uint16_t length);
 
-struct register_t * modbus_registers;
 
 /* GLOBAL VARIABLES */
+static modbus_register registers[REGISTERS_NUMBER]; // allocates memory for modbus register data
 uint8_t write_request_head[] = {DEVICE_ID, MODBUS_FUNCTION_WRITE};
 uint8_t read_request_head[] = {DEVICE_ID, MODBUS_FUNCTION_READ};
 
 
-void modbus_init(struct register_t * modbus_registers_pointer)
+modbus_handler modbus_init()
 {
-	modbus_registers = modbus_registers_pointer;
+	modbus_handler handler;
+	handler.registers = &registers;
+	return handler;
 }
 
 uint8_t get_high_byte(uint16_t two_byte) 
@@ -73,9 +75,9 @@ int8_t modbus_process_frame(uint8_t * frame, uint16_t frame_size)
 		if (first_address_offset + registers_number-1 > MAX_REGISTERS_OFFSET)
 		return -1; // index out of range
 		
-		if ( are_registers_valid(modbus_registers + first_address_offset, registers_number) )
+		if ( are_registers_valid(registers + first_address_offset, registers_number) )
 		{
-			send_info_response(modbus_registers + first_address_offset, registers_number);
+			send_info_response(registers + first_address_offset, registers_number);
 			return REQUEST_TYPE_READ;
 		}
 	}
@@ -91,9 +93,9 @@ int8_t modbus_process_frame(uint8_t * frame, uint16_t frame_size)
 		if (register_offset > MAX_REGISTERS_OFFSET)
 		return FRAME_ERROR_LENGTH;
 		
-		if ( are_registers_valid(modbus_registers + register_offset, 1) )
+		if ( are_registers_valid(registers + register_offset, 1) )
 		{
-			(modbus_registers + register_offset)->value = value_to_set;
+			(registers + register_offset)->value = value_to_set;
 			rs485_transmit_byte_array(frame, frame_size); // send echo as response
 			return REQUEST_TYPE_WRITE;
 		}
@@ -102,7 +104,7 @@ int8_t modbus_process_frame(uint8_t * frame, uint16_t frame_size)
 	return -1;
 }
 
-void send_info_response(struct register_t * first_register, uint8_t registers_number)
+void send_info_response(modbus_register * first_register, uint8_t registers_number)
 { 
 	uint8_t response_buffer[5 + 2 * REGISTERS_NUMBER]; // max array size is needed when all registers are read back
 	uint8_t frame_len = 3 + 2*registers_number + 2;
@@ -130,9 +132,9 @@ void send_info_response(struct register_t * first_register, uint8_t registers_nu
 	rs485_transmit_byte_array(response_buffer, frame_len);
 }
 
-void get_info_registers(struct register_t  * data, uint16_t data_length)
+void get_info_registers(modbus_register  * data, uint16_t data_length)
 {
-	memcpy(modbus_registers, data, data_length);
+	memcpy(registers, data, data_length);
 }
 
 void print_buffer(uint8_t * buffer, uint16_t length)
@@ -145,7 +147,7 @@ void print_buffer(uint8_t * buffer, uint16_t length)
 }
 
 
-bool are_registers_valid(struct register_t * first_register, uint8_t registers_number)
+bool are_registers_valid(modbus_register * first_register, uint8_t registers_number)
 {
 	for (int i = 0; i < registers_number; i++)
 	{
