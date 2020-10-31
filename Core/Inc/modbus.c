@@ -17,6 +17,8 @@ uint16_t get_short_big_endian(uint8_t * first_byte_pointer);
 bool are_registers_valid(struct register_t * first_register, uint8_t registers_number);
 void send_info_response(struct register_t * first_register, uint8_t registers_number);
 void get_info_registers(struct register_t  * data, uint16_t data_length);
+void print_buffer(uint8_t * buffer, uint16_t length);
+
 struct register_t * modbus_registers;
 
 /* GLOBAL VARIABLES */
@@ -120,6 +122,16 @@ void get_info_registers(struct register_t  * data, uint16_t data_length)
 {
 	memcpy(modbus_registers, data, data_length);
 }
+
+void print_buffer(uint8_t * buffer, uint16_t length)
+{
+	for (int index = 0; index < length; index++)
+	{
+		printf("0x%02x | ", *(buffer + index));
+	}
+	printf("\n");
+}
+
 
 bool are_registers_valid(struct register_t * first_register, uint8_t registers_number)
 {

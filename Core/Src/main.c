@@ -95,6 +95,7 @@ static channel_t channel_array[OUTPUT_CHANNELS_NUMBER] = {
 	{gate_2_Pin, 1, WORK_STATE_AUTO, INIT_CHANNEL_SETPOINT_C, 0, 0, GATE_IDLE},
 	{gate_3_Pin, 2, WORK_STATE_AUTO, INIT_CHANNEL_SETPOINT_C, 0, 0, GATE_IDLE}
 };
+uint8_t uart_rx_byte = 0;
 
 
 /* USER CODE END PV */
@@ -134,10 +135,10 @@ void update_working_parameters()
 	printf("%s", "Updating working parameters\n");
 	HAL_GPIO_TogglePin(GPIOD, LED_G_Pin);
 	ntc_calculate_temperatures(&sensor_values);
-	for (int channel = 0; channel < ADC_SENSOR_NUMBER; channel++)
-	{
-	  printf("CH%d val: %d, temp: %d\n", channel, sensor_values.adc_values[channel], sensor_values.temperatures[channel]);
-	}
+//	for (int channel = 0; channel < ADC_SENSOR_NUMBER; channel++)
+//	{
+//	  printf("CH%d val: %d, temp: %d\n", channel, sensor_values.adc_values[channel], sensor_values.temperatures[channel]);
+//	}
 
 	temperature_error_state = check_temperatures(&sensor_values);
 
@@ -367,21 +368,27 @@ int main(void)
 	modbus_init(modbus_registers);
 	init_modbus_registers();
 
+	// TEMPORARY, START RECEIVING BYTES
+	HAL_StatusTypeDef status = HAL_UART_Receive_IT(&huart1, &uart_rx_byte, 1);
+	if (status != HAL_OK)
+	{
+	  printf ("%s \n", "Error, cannot start HAL_UART_Transmit_IT");
+	}
+
 	/* USER CODE END 2 */
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 
   while (1)
   {
-	// EXPERIMENTAL AREA
-	  while (1)
-	  {
-		  char array1[20] = "AlaMaKota";
-		  rs485_transmit_byte_array(array1, 20);
-		  HAL_Delay(1000);
-	  }
-
-	// EXPERIMENTAL AREA END
+//	// EXPERIMENTAL AREA
+//	  while (1)
+//	  {
+//		  char array1[20] = "AlaMaKota";
+//		  rs485_transmit_byte_array(array1, 20);
+//		  HAL_Delay(1000);
+//	  }
+//	// EXPERIMENTAL AREA END
 
 	if (update_working_parameters_pending_flag == true)
 	{
@@ -763,28 +770,51 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		gate_pulse_delay_counter_us += MAIN_TIMER_RESOLUTION_US;
 		update_parameter_timer_counter_us += MAIN_TIMER_RESOLUTION_US;
 		rx_time_interval_counter += MAIN_TIMER_RESOLUTION_US;
-
-		if ( (rx_time_interval_counter > MAX_TIME_BETWEEN_MODBUS_FRAMES_US) && (!rs485_rx_buffer_empty()) )
-		{
-			rs485_get_frame(incoming_modbus_frame, RS_RX_BUFFER_SIZE);
-			modbus_request_pending_flag = true;
-		}
-
-
 	}
 }
 
 /* ADC conversion finished callback */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
-  printf("%s\n", "ADC conversion finished");
+//  printf("%s\n", "ADC conversion finished");
   update_working_parameters_pending_flag = true;
 }
 
 /* UART RX finished callback */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	printf("%s", "UART RX complete");
+	printf("Serial received a byte: %02x\n", uart_rx_byte);
+
+	if ( (rx_time_interval_counter > 5*MAX_TIME_BETWEEN_MODBUS_FRAMES_US) && (!rs485_rx_buffer_empty()) )
+	{
+		rs485_get_frame(incoming_modbus_frame, RS_RX_BUFFER_SIZE);
+		printf("Frame received from serial: ");
+		print_buffer(incoming_modbus_frame, modbus_frame_byte_counter);
+		modbus_request_pending_flag = true;
+	}
+	else
+	{
+		rx_time_interval_counter = 0;
+
+		if (modbus_request_pending_flag == false)
+		{
+			if (rs485_get_byte_to_buffer(&uart_rx_byte))
+			{
+				modbus_frame_byte_counter++;
+			}
+			else
+			{
+				printf ("Error, cannot get byte to buffer (buffer full)\n");
+			}
+		}
+	}
+
+	// Prepare for next byte receiving
+	HAL_StatusTypeDef status = HAL_UART_Receive_IT(&huart1, &uart_rx_byte, 1);
+	if (status != HAL_OK)
+	{
+	  printf ("%s \n", "Error, cannot start HAL_UART_Transmit_IT");
+	}
 }
 
 /* UART TX finished callback */

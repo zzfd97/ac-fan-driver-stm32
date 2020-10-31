@@ -5,8 +5,6 @@
 
 /* STATIC FUNCTION PROTOTYPES */
 void transmit_byte(uint8_t data);
-void transmitter_enable(void);
-void transmitter_disable(void);
 bool rx_buffer_full(void);
 
 /* GLOBAL VARIABLES */
@@ -47,13 +45,13 @@ void transmitter_disable(void)
 }
 
 
-bool rs485_ready_to_send(void)
-{
-	if (tx_buffer_pointer == uart_tx_buffer)
-		return true;
-	else
-		return false;
-}
+//bool rs485_ready_to_send(void)
+//{
+//	if (tx_buffer_pointer == uart_tx_buffer)
+//		return true;
+//	else
+//		return false;
+//}
 
 bool rx_buffer_full(void)
 {
@@ -71,17 +69,16 @@ bool rs485_rx_buffer_empty(void)
 		return false;	
 }
 
-bool rs485_get_byte_to_buffer()
+bool rs485_get_byte_to_buffer(uint8_t * byte)
 {
-//	if (!rx_buffer_full())
-//	{
-//		uint8_t received_byte = usart_get(&USART0);
-//		*rx_buffer_pointer = received_byte;
-//		rx_buffer_pointer++;
-//		return true;
-//	}
-//	else
-//		return false;
+	if (!rx_buffer_full())
+	{
+		*rx_buffer_pointer = *byte;
+		rx_buffer_pointer++;
+		return true;
+	}
+	else
+		return false;
 }
 
 void rs485_get_frame(uint8_t * dest_array, uint8_t array_size)
