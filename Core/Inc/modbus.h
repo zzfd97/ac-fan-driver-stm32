@@ -9,7 +9,7 @@
 #define REQUEST_TYPE_READ 0
 #define REQUEST_TYPE_WRITE 1
 
-/* type definition for modbus registers table, unused registers should have field active = false */
+/* type definition for Modbus registers table, unused registers should have field active = false */
 struct register_t
 {
 	bool active;
@@ -18,7 +18,7 @@ struct register_t
 
 void modbus_init(struct register_t * modbus_registers_pointer);
 
-/* Function to process modbus frame. Returns REQUEST_TYPE_READ or REQUEST_TYPE_WRITE or -1 if frame is not valid*/
+/* Function to process Modbus frame. Returns REQUEST_TYPE_READ or REQUEST_TYPE_WRITE or -1 if frame is not valid*/
 int8_t modbus_process_frame(uint8_t * frame, uint16_t frame_size);
 
 #endif /* MODBUS_H_ */

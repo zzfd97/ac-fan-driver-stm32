@@ -260,6 +260,7 @@ void init_modbus_registers(void)
 
 void update_modbus_registers(void)
 {
+	printf("Updating Modbus registers with data from app before processing request\n");
 	modbus_registers[0].value = channel_array[0].work_state;
 	modbus_registers[1].value = channel_array[1].work_state;
 	modbus_registers[2].value = channel_array[2].work_state;
@@ -281,14 +282,17 @@ void update_modbus_registers(void)
 
 void update_app_data(void)
 {
+	printf("Updating app data with data from Modbus registers\n");
 	channel_array[0].work_state = modbus_registers[0].value;
 	channel_array[1].work_state = modbus_registers[1].value;
 	channel_array[2].work_state = modbus_registers[2].value;
 
 	if ((modbus_registers[3].value) != channel_array[0].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER) // check if value changed
 	{
+		printf("Setting channel 1 voltage to value %d\n", modbus_registers[3].value); // TODO REMOVE
 		channel_array[0].work_state = WORK_STATE_MANUAL;
 		channel_array[0].output_voltage_decpercent = modbus_registers[3].value*VOLTAGE_PRECISION_MULTIPLIER;
+//		printf("After update: channel 0 output voltage is  %d\n", channel_array[0].output_voltage_decpercent); // TODO REMOVE
 	}
 
 	if ((modbus_registers[4].value) != channel_array[1].output_voltage_decpercent/VOLTAGE_PRECISION_MULTIPLIER) // check if value changed
@@ -381,15 +385,6 @@ int main(void)
 
   while (1)
   {
-//	// EXPERIMENTAL AREA
-//	  while (1)
-//	  {
-//		  char array1[20] = "AlaMaKota";
-//		  rs485_transmit_byte_array(array1, 20);
-//		  HAL_Delay(1000);
-//	  }
-//	// EXPERIMENTAL AREA END
-
 	if (update_working_parameters_pending_flag == true)
 	{
 		update_working_parameters();
@@ -397,9 +392,6 @@ int main(void)
 
 	if (modbus_request_pending_flag == true)
 	{
-		printf("Modbus request received: ");
-		print_buffer(incoming_modbus_frame, modbus_frame_byte_counter);
-
 		update_modbus_registers();
 		int8_t request_type = modbus_process_frame(incoming_modbus_frame, modbus_frame_byte_counter);
 
@@ -411,20 +403,6 @@ int main(void)
 		modbus_request_pending_flag = false;
 		modbus_frame_byte_counter = 0;
 	}
-	  // UART TESTING
-	//	  HAL_StatusTypeDef status;
-	//	  char string_to_send[] = "Sample_texts";
-	//	  printf ("%s \n", "Sending char");
-	//	  status = HAL_UART_Transmit_IT(&huart1, &string_to_send, 12);
-	//	  if (status != HAL_OK)
-	//	  {
-	//		  printf ("%s \n", "Error");
-	//	  }
-	//	  uint8_t received_byte;
-	//	  HAL_UART_Receive_IT(&huart1, &received_byte, 1);
-	//	  HAL_Delay(1000);
-	//	  printf ("%s %c \n", "Received: ", received_byte);
-	//
 
     /* USER CODE END WHILE */
 

@@ -24,14 +24,13 @@ void rs485_init(UART_HandleTypeDef * uart_handler_ptr)
 
 void rs485_transmit_byte_array(uint8_t * byte_array, uint16_t array_size)
 {
-	printf ("%s\n", "Transmitting byte array");
 	transmitter_enable();
-	HAL_StatusTypeDef status = HAL_UART_Transmit_IT(uart_handler, byte_array, array_size);
+
+	HAL_StatusTypeDef status = HAL_UART_Transmit(uart_handler, byte_array, array_size, 100); // must be blocking, as array is passed by pointer
 	if (status != HAL_OK)
 	{
 	  printf ("%s \n", "Cannot send buffer");
 	}
-
 }
 
 void transmitter_enable(void)
