@@ -44,14 +44,6 @@ void transmitter_disable(void)
 }
 
 
-//bool rs485_ready_to_send(void)
-//{
-//	if (tx_buffer_pointer == uart_tx_buffer)
-//		return true;
-//	else
-//		return false;
-//}
-
 bool rx_buffer_full(void)
 {
 	if (rx_buffer_pointer <= uart_rx_buffer + RS_RX_BUFFER_SIZE)
@@ -83,6 +75,6 @@ bool rs485_get_byte_to_buffer(uint8_t * byte)
 void rs485_get_frame(uint8_t * dest_array, uint8_t array_size)
 {
 	memcpy(dest_array, uart_rx_buffer, array_size);
-	memset(uart_rx_buffer, 0, RS_TX_BUFFER_SIZE);
+	memset(uart_rx_buffer, 0, RS_RX_BUFFER_SIZE);
 	rx_buffer_pointer = uart_rx_buffer;
 }

@@ -65,10 +65,10 @@ int8_t modbus_process_frame(uint8_t * frame, uint16_t frame_size)
 	// read request received
 	if (memcmp(frame, read_request_head, sizeof(write_request_head)) == 0)
 	{
-		printf("Read request received\n");
+		printf("Read request received, ");
 		uint16_t first_address_offset = get_short_big_endian(frame+2);
 		uint16_t registers_number = get_short_big_endian(frame+4);
-		printf("First register offset: %d, number of registers: %d\n", first_address_offset, registers_number);
+		printf("first register offset: %d, number of registers: %d\n", first_address_offset, registers_number);
 		
 		if (first_address_offset + registers_number-1 > MAX_REGISTERS_OFFSET)
 		return -1; // index out of range
@@ -83,10 +83,10 @@ int8_t modbus_process_frame(uint8_t * frame, uint16_t frame_size)
 	// write request received
 	else if ( memcmp(frame, write_request_head, sizeof(write_request_head)) == 0 )
 	{
-		printf("Write request received\n");
+		printf("Write request received, ");
 		uint16_t register_offset = get_short_big_endian(frame+2);
 		int16_t value_to_set = get_short_big_endian(frame+4);
-		printf("Setting register with offset %d, value to set: %d\n", register_offset, value_to_set);
+		printf("setting register with offset %d, value to set: %d\n", register_offset, value_to_set);
 		
 		if (register_offset > MAX_REGISTERS_OFFSET)
 		return FRAME_ERROR_LENGTH;
