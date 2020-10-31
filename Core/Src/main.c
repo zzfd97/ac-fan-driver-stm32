@@ -397,6 +397,9 @@ int main(void)
 
 	if (modbus_request_pending_flag == true)
 	{
+		printf("Modbus request received: ");
+		print_buffer(incoming_modbus_frame, modbus_frame_byte_counter);
+
 		update_modbus_registers();
 		int8_t request_type = modbus_process_frame(incoming_modbus_frame, modbus_frame_byte_counter);
 
@@ -771,6 +774,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		update_parameter_timer_counter_us += MAIN_TIMER_RESOLUTION_US;
 		rx_time_interval_counter += MAIN_TIMER_RESOLUTION_US;
 	}
+
+	if ( (rx_time_interval_counter > MAX_TIME_BETWEEN_MODBUS_FRAMES_US) && (!rs485_rx_buffer_empty()) )
+	{
+		rs485_get_frame(incoming_modbus_frame, RS_RX_BUFFER_SIZE);
+		modbus_request_pending_flag = true;
+	}
 }
 
 /* ADC conversion finished callback */
@@ -783,13 +792,11 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 /* UART RX finished callback */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	printf("Serial received a byte: %02x\n", uart_rx_byte);
+//	printf("Serial received a byte: %02x\n", uart_rx_byte);
 
-	if ( (rx_time_interval_counter > 5*MAX_TIME_BETWEEN_MODBUS_FRAMES_US) && (!rs485_rx_buffer_empty()) )
+	if ( (rx_time_interval_counter > MAX_TIME_BETWEEN_MODBUS_FRAMES_US) && (!rs485_rx_buffer_empty()) )
 	{
 		rs485_get_frame(incoming_modbus_frame, RS_RX_BUFFER_SIZE);
-		printf("Frame received from serial: ");
-		print_buffer(incoming_modbus_frame, modbus_frame_byte_counter);
 		modbus_request_pending_flag = true;
 	}
 	else
@@ -804,7 +811,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 			}
 			else
 			{
-				printf ("Error, cannot get byte to buffer (buffer full)\n");
+				printf ("ERROR, cannot get byte to buffer (buffer full)\n");
 			}
 		}
 	}
@@ -813,7 +820,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	HAL_StatusTypeDef status = HAL_UART_Receive_IT(&huart1, &uart_rx_byte, 1);
 	if (status != HAL_OK)
 	{
-	  printf ("%s \n", "Error, cannot start HAL_UART_Transmit_IT");
+	  printf ("ERROR, cannot start HAL_UART_Transmit_IT\n");
 	}
 }
 
