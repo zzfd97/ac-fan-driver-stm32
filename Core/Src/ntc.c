@@ -1,4 +1,5 @@
 #include <ntc.h>
+#include <config.h>
 
 /* STATIC FUNCTIONS DECLARATIONS */
 /* converts 10bit ADC read value to temperature in Celsius degree */
@@ -88,4 +89,20 @@ void ntc_calculate_temperatures(sensors_t * sensor_values)
 int16_t adc_to_temperature(uint16_t adc_value){
 	return NTC_table[adc_value/2]; // table consists of 512 elements, while 10-bit ADC have max value 1024
 };
+
+
+int16_t check_temperatures(sensors_t * sensor_array)
+{
+	for (int i = 0; i < ADC_SENSOR_NUMBER; i++)
+	{
+		int16_t temperature = sensor_array->temperatures[i];
+		if ( (temperature > MAX_WORKING_TEMPERATURE) || (temperature < MIN_WORKING_TEMPERATURE) )
+		{
+//			printf("ERROR: temperature out of accepted range\n");
+			return TEMPERATURE_STATUS_ERROR;
+		}
+	}
+	return TEMPERATURE_STATUS_NO_ERROR;
+}
+
 

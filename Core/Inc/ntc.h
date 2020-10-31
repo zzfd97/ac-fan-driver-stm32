@@ -1,6 +1,8 @@
 #include "stm32f4xx_hal.h"
 
 #define ADC_SENSOR_NUMBER 6
+#define TEMPERATURE_STATUS_NO_ERROR 0
+#define TEMPERATURE_STATUS_ERROR 1
 
 /* TYPE DEFINITIONS */
 typedef struct
@@ -12,3 +14,5 @@ typedef struct
 /* reads temperature from all sensors */
 void ntc_calculate_temperatures(sensors_t * sensor_values);
 
+/* check if temperatures are in accepted range */
+int16_t check_temperatures(sensors_t * sensor_array);

@@ -1,5 +1,6 @@
-Core/Src/ntc.o: ../Core/Src/ntc.c \
- C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/ntc.h \
+Core/Inc/rs485.o: ../Core/Inc/rs485.c \
+ C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/config.h \
+ C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/rs485.h \
  C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h \
  C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/stm32f4xx_hal_conf.h \
  C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h \
@@ -30,9 +31,11 @@ Core/Src/ntc.o: ../Core/Src/ntc.c \
  C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h \
  C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
  C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h \
- C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/config.h
+ C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/main.h
 
-C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/ntc.h:
+C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/config.h:
+
+C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/rs485.h:
 
 C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
 
@@ -94,4 +97,4 @@ C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM
 
 C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:
 
-C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/config.h:
+C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/main.h:

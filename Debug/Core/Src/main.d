@@ -30,7 +30,11 @@ Core/Src/main.o: ../Core/Src/main.c \
  C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h \
  C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
  C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h \
- C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/ntc.h
+ C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/config.h \
+ C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/ntc.h \
+ C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/rs485.h \
+ C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/main.h \
+ C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/modbus.h
 
 C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/main.h:
 
@@ -94,4 +98,12 @@ C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM
 
 C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:
 
+C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/config.h:
+
 C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/ntc.h:
+
+C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/rs485.h:
+
+C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/main.h:
+
+C:/GoogleDrive/Elektronika/AC\ fan\ driver/stm32_app/CubeMx\ project/Core/Inc/modbus.h:
