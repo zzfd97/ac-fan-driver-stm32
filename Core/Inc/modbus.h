@@ -10,6 +10,11 @@
 
 typedef int16_t modbus_register;
 
+/* ABOUT */
+/* This module implements slave Modbus device that can handle some of Modbus functions.
+ * It keeps its own register with values, that can be either set or checked using module's API.
+ */
+
 /**
  * Sets value in Modbus register
  * @param offset Number representing offset of given register (for 40001 use 0)
