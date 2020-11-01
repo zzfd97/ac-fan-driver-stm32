@@ -5,9 +5,6 @@
 /* converts 10bit ADC read value to temperature in Celsius degree */
 int16_t adc_to_temperature(uint16_t adc_value);
 
-/* single ADC read from selected channels, returns 10-bit value */
-uint16_t adc_value_read(uint8_t adc_channel);
-
 
 // lookup table for temperature reads; index is ADC value and values are in Celcius Degree * 10
 // this table is for: NTC 1k@25C with 200Ohm pull-up, beta = 3730

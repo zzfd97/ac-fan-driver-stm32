@@ -113,12 +113,8 @@ extern void initialise_monitor_handles(void);
 /* FUNCTION PROTOTYPES */
 void drive_fans(void);
 uint32_t get_gate_delay_us(uint16_t output_power);
-void gpio_init(void);
-void interrupt_init(void);
-void led_blink(uint8_t count, uint32_t on_off_cycle_period_ms);
 int16_t pi_regulator(uint8_t channel, int16_t current_temp, int16_t target_temperature);
 void set_gate_state(channel_t * fan, gate_state_t pulse_state);
-void timer_start(uint32_t time_us);
 void update_working_parameters(void);
 void update_modbus_registers(void);
 void update_app_data(void);
@@ -770,7 +766,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 		if (modbus_request_pending_flag == false)
 		{
-			if (rs485_get_byte_to_buffer(&uart_rx_byte))
+			if (rs485_collect_byte_to_buffer(&uart_rx_byte))
 			{
 				modbus_frame_byte_counter++;
 			}
@@ -792,7 +788,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 /* UART TX finished callback */
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
-	transmitter_disable(); // disable dir pin after RS485 transmission is finished
+	//
 }
 
 /* USER CODE END 4 */

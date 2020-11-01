@@ -4,8 +4,8 @@
 #include <stdbool.h>
 
 /* STATIC FUNCTION PROTOTYPES */
-void transmit_byte(uint8_t data);
-bool rx_buffer_full(void);
+void transmitter_enable(void);
+void transmitter_disable(void);
 
 /* GLOBAL VARIABLES */
 uint8_t uart_tx_buffer[RS_TX_BUFFER_SIZE];
@@ -22,6 +22,27 @@ void rs485_init(UART_HandleTypeDef * uart_handler_ptr)
 }
 
 
+bool rs485_collect_byte_to_buffer(uint8_t * byte)
+{
+	if (!rs485_rx_buffer_full())
+	{
+		*rx_buffer_pointer = *byte;
+		rx_buffer_pointer++;
+		return true;
+	}
+	else
+		return false;
+}
+
+
+void rs485_get_complete_frame(uint8_t * dest_array, uint8_t array_size)
+{
+	memcpy(dest_array, uart_rx_buffer, array_size);
+	memset(uart_rx_buffer, 0, RS_RX_BUFFER_SIZE);
+	rx_buffer_pointer = uart_rx_buffer;
+}
+
+
 void rs485_transmit_byte_array(uint8_t * byte_array, uint16_t array_size)
 {
 	transmitter_enable();
@@ -31,7 +52,27 @@ void rs485_transmit_byte_array(uint8_t * byte_array, uint16_t array_size)
 	{
 	  printf ("%s \n", "Cannot send buffer");
 	}
+	transmitter_disable(); // disable DIR pin after transmission is finished
 }
+
+
+bool rs485_rx_buffer_empty(void)
+{
+	if (rx_buffer_pointer == uart_rx_buffer)
+		return true;
+	else
+		return false;
+}
+
+
+bool rs485_rx_buffer_full(void)
+{
+	if (rx_buffer_pointer <= uart_rx_buffer + RS_RX_BUFFER_SIZE)
+		return false;
+	else
+		return true;
+}
+
 
 void transmitter_enable(void)
 {
@@ -43,38 +84,3 @@ void transmitter_disable(void)
 	HAL_GPIO_WritePin(rs_dir_GPIO_Port, rs_dir_Pin, GPIO_PIN_RESET);
 }
 
-
-bool rx_buffer_full(void)
-{
-	if (rx_buffer_pointer <= uart_rx_buffer + RS_RX_BUFFER_SIZE)
-		return false;
-	else
-		return true;
-}
-
-bool rs485_rx_buffer_empty(void)
-{
-	if (rx_buffer_pointer == uart_rx_buffer)
-		return true;
-	else
-		return false;	
-}
-
-bool rs485_get_byte_to_buffer(uint8_t * byte)
-{
-	if (!rx_buffer_full())
-	{
-		*rx_buffer_pointer = *byte;
-		rx_buffer_pointer++;
-		return true;
-	}
-	else
-		return false;
-}
-
-void rs485_get_complete_frame(uint8_t * dest_array, uint8_t array_size)
-{
-	memcpy(dest_array, uart_rx_buffer, array_size);
-	memset(uart_rx_buffer, 0, RS_RX_BUFFER_SIZE);
-	rx_buffer_pointer = uart_rx_buffer;
-}
