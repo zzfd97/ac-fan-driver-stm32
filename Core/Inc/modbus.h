@@ -4,28 +4,22 @@
 #ifndef MODBUS_H_
 #define MODBUS_H_
 
+// Adjustable parameters
 #define DEVICE_ID 0x02
 #define REGISTERS_NUMBER 16
+
 #define REQUEST_TYPE_READ 0
 #define REQUEST_TYPE_WRITE 1
 
-/* type definition for Modbus registers table, unused registers should have field active = false */
-typedef struct modbus_register
-{
-	bool active;
-	int16_t value;
-} modbus_register;
+typedef int16_t modbus_register;
 
-typedef struct modbus_handler
-{
-	modbus_register * registers;
-} modbus_handler;
+/* Set value in Modbus register */
+bool modbus_set_reg_value(uint16_t offset, int16_t value);
 
+/* Get value from Modbus register */
+int16_t modbus_get_reg_value(uint16_t offset);
 
-/* Function for initializing Modbus registers */
-modbus_handler modbus_init();
-
-/* Function to process Modbus frame. Returns REQUEST_TYPE_READ or REQUEST_TYPE_WRITE or -1 if frame is not valid*/
+/* Process Modbus frame. Returns REQUEST_TYPE_READ or REQUEST_TYPE_WRITE or -1 if frame is not valid*/
 int8_t modbus_process_frame(uint8_t * frame, uint16_t frame_size);
 
 #endif /* MODBUS_H_ */
