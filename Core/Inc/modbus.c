@@ -120,16 +120,6 @@ bool modbus_process_frame(uint8_t * request, uint16_t request_size, uint8_t * re
 }
 
 
-void print_buffer(uint8_t * buffer, uint16_t length)
-{
-	for (int index = 0; index < length; index++)
-	{
-		printf("0x%02x | ", *(buffer + index));
-	}
-	printf("\n");
-}
-
-
 uint8_t get_high_byte(uint16_t two_byte)
 {
 	return ((two_byte >> 8) & 0xFF); // MSB
@@ -151,4 +141,14 @@ uint16_t get_short_little_endian(uint8_t * first_byte_pointer) // first byte is 
 uint16_t get_short_big_endian(uint8_t * first_byte_pointer) // first byte is high byte
 {
 	return (short) (*first_byte_pointer << 8 | *(first_byte_pointer+1));
+}
+
+
+void print_buffer(uint8_t * buffer, uint16_t length)
+{
+	for (int index = 0; index < length; index++)
+	{
+		printf("0x%02x | ", *(buffer + index));
+	}
+	printf("\n");
 }

@@ -16,7 +16,7 @@ typedef int16_t modbus_register;
  */
 
 /**
- * Sets value in Modbus register
+ * Set value in Modbus register
  * @param offset Number representing offset of given register (for 40001 use 0)
  * @param value Value to set in given register
  * @return True if success, false otherwise
