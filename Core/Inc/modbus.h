@@ -19,7 +19,7 @@ bool modbus_set_reg_value(uint16_t offset, int16_t value);
 /* Get value from Modbus register */
 int16_t modbus_get_reg_value(uint16_t offset);
 
-/* Process Modbus frame. Returns REQUEST_TYPE_READ or REQUEST_TYPE_WRITE or -1 if frame is not valid*/
-int8_t modbus_process_frame(uint8_t * frame, uint16_t frame_size);
+/* Process Modbus frame and generate response */
+bool modbus_process_frame(uint8_t * frame, uint16_t frame_size, uint8_t * response_buffer, uint16_t * response_length);
 
 #endif /* MODBUS_H_ */

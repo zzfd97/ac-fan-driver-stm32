@@ -378,8 +378,13 @@ int main(void)
 
 	if (modbus_request_pending_flag == true)
 	{
+		uint8_t response_buffer[RS_TX_BUFFER_SIZE];
+		uint16_t response_size;
 		update_modbus_registers(); // update Modbus registers with data from app
-		modbus_process_frame(incoming_modbus_frame, modbus_frame_byte_counter);
+		if (modbus_process_frame(incoming_modbus_frame, modbus_frame_byte_counter, response_buffer, &response_size))
+		{
+			rs485_transmit_byte_array(response_buffer, response_size);
+		}
 		update_app_data(); // update app with new data from processed Modbus frame (needed if it was write command)
 
 		modbus_request_pending_flag = false;
