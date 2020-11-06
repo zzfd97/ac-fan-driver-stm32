@@ -25,6 +25,7 @@
 #include <ntc.h>
 #include <rs485.h>
 #include <modbus.h>
+#include <gate_driver.h>
 
 
 /* Private includes ----------------------------------------------------------*/
@@ -58,24 +59,6 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 
-/* Types */
-
-typedef enum
-{
-	GATE_IDLE,
-	GATE_ACTIVE,
-} gate_state_t;
-
-typedef struct
-{
-	uint32_t gate_pin;
-	const uint8_t temp_sensor_index;
-	uint8_t work_state;
-	int16_t setpoint;
-	int16_t output_voltage_decpercent;
-	uint32_t activation_delay_us; // time from zero-crossing to gate activation
-	gate_state_t state;
-} channel_t;
 
 /* Flags */
 bool update_working_parameters_pending_flag = false;
@@ -111,10 +94,8 @@ extern void initialise_monitor_handles(void);
 /* USER CODE BEGIN PFP */
 
 /* FUNCTION PROTOTYPES */
-void drive_fans(void);
-uint32_t get_gate_delay_us(uint16_t output_power);
+
 int16_t pi_regulator(uint8_t channel, int16_t current_temp, int16_t target_temperature);
-void set_gate_state(channel_t * fan, gate_state_t pulse_state);
 void update_working_parameters(void);
 void update_modbus_registers(void);
 void update_app_data(void);
@@ -151,48 +132,6 @@ void update_working_parameters()
 }
 
 
-void drive_fans(void)
-{
-	for (uint8_t i = 0; i < OUTPUT_CHANNELS_NUMBER; i++)
-	{
-		if (channel_array[i].output_voltage_decpercent < MIN_OUTPUT_VOLTAGE_DECPERCENT)
-		{
-			set_gate_state(&channel_array[i], GATE_IDLE); // full off
-		}
-
-		else if (channel_array[i].output_voltage_decpercent >= MAX_OUTPUT_VOLTAGE_DECPERCENT)
-		{
-			set_gate_state(&channel_array[i], GATE_ACTIVE); // full on
-		}
-
-		else if ( (gate_pulse_delay_counter_us >= channel_array[i].activation_delay_us) && (gate_pulse_delay_counter_us < (channel_array[i].activation_delay_us + GATE_PULSE_MIN_TIME_US)) )
-		{
-			set_gate_state(&channel_array[i], GATE_ACTIVE);
-		}
-		else
-		{
-			set_gate_state(&channel_array[i], GATE_IDLE);
-		}
-	}
-}
-
-
-uint32_t get_gate_delay_us(uint16_t output_voltage_percent)
-{
-	uint16_t mean_voltage = (output_voltage_percent*23)/100;
-	double activation_angle_rad = acos(mean_voltage/230.0); // acos function input is double, value from -1 to 1
-	uint32_t gate_delay = HALF_SINE_PERIOD_US*activation_angle_rad/(PI/2.0);
-
-	if (gate_delay > MAX_GATE_DELAY_US)
-		gate_delay = MAX_GATE_DELAY_US;
-
-	if (gate_delay < MIN_GATE_DELAY_US)
-		gate_delay = MIN_GATE_DELAY_US;
-
-	return gate_delay - ZERO_CROSSING_DETECTION_OFFSET_US;
-}
-
-
 int16_t pi_regulator(uint8_t channel, int16_t current_temp, int16_t setpoint)
 {
 	int16_t error;
@@ -221,27 +160,6 @@ int16_t pi_regulator(uint8_t channel, int16_t current_temp, int16_t setpoint)
 
 	return output_voltage_decpercent;
 };
-
-
-void set_gate_state(channel_t * fan, gate_state_t pulse_state)
-{
-	if (fan->state == pulse_state)
-	{
-		return; // no state change
-	}
-
-	fan->state = pulse_state;
-
-	if (pulse_state == GATE_ACTIVE)
-	{
-		HAL_GPIO_WritePin(GPIOC, fan->gate_pin, GPIO_PIN_RESET); // optotransistor is active low
-	}
-
-	if (pulse_state != GATE_ACTIVE)
-	{
-		HAL_GPIO_WritePin(GPIOC, fan->gate_pin, GPIO_PIN_SET);
-	}
-}
 
 
 void update_modbus_registers(void)
@@ -352,7 +270,7 @@ int main(void)
 	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, 6);
 
 	rs485_init(&huart1);
-	update_working_parameters();
+//	update_working_parameters();
 
 	// TEMPORARY, START RECEIVING BYTES
 	HAL_StatusTypeDef status = HAL_UART_Receive_IT(&huart1, &uart_rx_byte, 1);
@@ -723,7 +641,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if (htim->Instance == TIM2)
 	{
-		drive_fans();
+		drive_fans(channel_array, OUTPUT_CHANNELS_NUMBER, gate_pulse_delay_counter_us);
 
 		if(update_parameter_timer_counter_us >= WORKING_PARAMETERS_UPDATE_PERIOD_US)
 		{

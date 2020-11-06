@@ -1,6 +1,6 @@
 #include "stm32f4xx_hal.h"
+#include <config.h>
 
-#define ADC_SENSOR_NUMBER 6
 #define TEMPERATURE_STATUS_NO_ERROR 0
 #define TEMPERATURE_STATUS_ERROR 1
 
