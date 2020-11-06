@@ -543,7 +543,7 @@ static void MX_DMA_Init(void)
 
   /* DMA interrupt init */
   /* DMA2_Stream0_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 3, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 
 }
@@ -609,7 +609,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(rs_dir_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
 }
