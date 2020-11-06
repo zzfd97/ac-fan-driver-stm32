@@ -54,7 +54,6 @@ bool modbus_process_frame(uint8_t * request, uint16_t request_size, uint8_t * re
 		return false;
 	}
 	
-	// read request received
 	switch (request[POSITION_FUNCTION])
 	{
 		case FUNCTION_READ_MULTIPLE:
