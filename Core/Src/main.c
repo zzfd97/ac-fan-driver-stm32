@@ -108,9 +108,11 @@ void update_app_data(void);
 
 void update_working_parameters()
 {
-	printf("%s", "Updating working parameters\n");
+//	printf("%s", "Updating working parameters\n");
 	HAL_GPIO_TogglePin(GPIOD, LED_G_Pin);
 	ntc_calculate_temperatures(&sensor_values);
+
+	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, 6); // CHECK HOW TO WAIT ON RESULTS
 //	for (int channel = 0; channel < ADC_SENSOR_NUMBER; channel++)
 //	{
 //	  printf("CH%d val: %d, temp: %d\n", channel, sensor_values.adc_values[channel], sensor_values.temperatures[channel]);
@@ -270,7 +272,7 @@ int main(void)
 	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, 6);
 
 	rs485_init(&huart1);
-//	update_working_parameters();
+	update_working_parameters();
 
 	// TEMPORARY, START RECEIVING BYTES
 	HAL_StatusTypeDef status = HAL_UART_Receive_IT(&huart1, &uart_rx_byte, 1);
@@ -643,15 +645,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	{
 		drive_fans(channel_array, OUTPUT_CHANNELS_NUMBER, gate_pulse_delay_counter_us);
 
-		if(update_parameter_timer_counter_us >= WORKING_PARAMETERS_UPDATE_PERIOD_US)
-		{
-			HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, 6);
-			update_parameter_timer_counter_us = 0;
-		}
-
 		gate_pulse_delay_counter_us += MAIN_TIMER_RESOLUTION_US;
 		update_parameter_timer_counter_us += MAIN_TIMER_RESOLUTION_US;
 		rx_time_interval_counter += MAIN_TIMER_RESOLUTION_US;
+
+		if(update_parameter_timer_counter_us >= WORKING_PARAMETERS_UPDATE_PERIOD_US)
+		{
+			update_working_parameters_pending_flag = true;
+			update_parameter_timer_counter_us = 0;
+		}
 	}
 
 	if ( (rx_time_interval_counter > MAX_TIME_BETWEEN_MODBUS_FRAMES_US) && (!rs485_rx_buffer_empty()) )
@@ -665,7 +667,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
 //  printf("%s\n", "ADC conversion finished");
-  update_working_parameters_pending_flag = true;
+	// TODO HANDLE CONVERSION FINISHED
 }
 
 /* UART RX finished callback */
