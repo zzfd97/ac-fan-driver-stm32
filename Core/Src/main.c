@@ -62,6 +62,7 @@ UART_HandleTypeDef huart1;
 
 /* Flags */
 bool update_working_parameters_pending_flag = false;
+bool adc_results_ready_flag = false;
 bool modbus_request_pending_flag = false;
 
 /* Global variables */
@@ -118,6 +119,13 @@ void update_working_parameters()
 //	  printf("CH%d val: %d, temp: %d\n", channel, sensor_values.adc_values[channel], sensor_values.temperatures[channel]);
 //	}
 
+//	while (adc_results_ready_flag != true)
+//	{
+//		// wait for conversion finished
+//	}
+	printf("%s\n", "ADC results ready\n");
+
+
 	temperature_error_state = check_temperatures(&sensor_values);
 
 	for (uint8_t i = 0; i < OUTPUT_CHANNELS_NUMBER; i++)
@@ -130,6 +138,7 @@ void update_working_parameters()
 	}
 
 	update_working_parameters_pending_flag = false;
+	adc_results_ready_flag = false;
 
 }
 
@@ -666,8 +675,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 /* ADC conversion finished callback */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
-//  printf("%s\n", "ADC conversion finished");
-	// TODO HANDLE CONVERSION FINISHED
+    printf("%s\n", "HAL_ADC_ConvCpltCallback");
+	adc_results_ready_flag = true;
 }
 
 /* UART RX finished callback */
