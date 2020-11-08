@@ -109,21 +109,23 @@ void update_app_data(void);
 
 void update_working_parameters()
 {
-//	printf("%s", "Updating working parameters\n");
+	PRINT_DEBUG("%s", "Updating working parameters\n");
 	HAL_GPIO_TogglePin(GPIOD, LED_G_Pin);
 	ntc_calculate_temperatures(&sensor_values);
 
 	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, 6); // CHECK HOW TO WAIT ON RESULTS
-//	for (int channel = 0; channel < ADC_SENSOR_NUMBER; channel++)
-//	{
-//	  printf("CH%d val: %d, temp: %d\n", channel, sensor_values.adc_values[channel], sensor_values.temperatures[channel]);
-//	}
 
-//	while (adc_results_ready_flag != true)
-//	{
-//		// wait for conversion finished
-//	}
-	printf("%s\n", "ADC results ready\n");
+	while (adc_results_ready_flag != true)
+	{
+		// wait for conversion finished
+	}
+
+	// PRINT RESULTS - CAREFUL, THIS PRINTS CAUSE LAG TO GATE DRIVING
+	//	PRINT_DEBUG("%s\n", "ADC results ready\n");
+	//	for (int channel = 0; channel < ADC_SENSOR_NUMBER; channel++)
+	//	{
+	//	  PRINT_DEBUG("CH%d val: %d, temp: %d\n", channel, sensor_values.adc_values[channel], sensor_values.temperatures[channel]);
+	//	}
 
 
 	temperature_error_state = check_temperatures(&sensor_values);
@@ -175,7 +177,7 @@ int16_t pi_regulator(uint8_t channel, int16_t current_temp, int16_t setpoint)
 
 void update_modbus_registers(void)
 {
-	printf("Updating Modbus registers with data from app before processing request\n");
+	PRINT_DEBUG("Updating Modbus registers with data from app before processing request\n");
 	modbus_set_reg_value(0, channel_array[0].work_state);
 	modbus_set_reg_value(1, channel_array[1].work_state);
 	modbus_set_reg_value(2, channel_array[2].work_state);
@@ -197,7 +199,7 @@ void update_modbus_registers(void)
 
 void update_app_data(void)
 {
-	printf("Updating app data with data from Modbus registers\n");
+	PRINT_DEBUG("Updating app data with data from Modbus registers\n");
 	channel_array[0].work_state = modbus_get_reg_value(0);
 	channel_array[1].work_state = modbus_get_reg_value(1);
 	channel_array[2].work_state = modbus_get_reg_value(2);
@@ -287,13 +289,14 @@ int main(void)
 	HAL_StatusTypeDef status = HAL_UART_Receive_IT(&huart1, &uart_rx_byte, 1);
 	if (status != HAL_OK)
 	{
-	  printf ("%s \n", "Error, cannot start HAL_UART_Transmit_IT");
+		PRINT_ERROR("%s \n", "Error, cannot start HAL_UART_Transmit_IT");
 	}
 
 	/* USER CODE END 2 */
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 
+	PRINT_DEBUG("App is running\n");
   while (1)
   {
 	if (update_working_parameters_pending_flag == true)
@@ -526,7 +529,7 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 9600;
+  huart1.Init.BaudRate = RS_BAUD_RATE;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
@@ -675,14 +678,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 /* ADC conversion finished callback */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
-    printf("%s\n", "HAL_ADC_ConvCpltCallback");
+	PRINT_DEBUG("%s\n", "HAL_ADC_ConvCpltCallback");
 	adc_results_ready_flag = true;
 }
 
 /* UART RX finished callback */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-//	printf("Serial received a byte: %02x\n", uart_rx_byte);
+	PRINT_DEBUG("Serial received a byte: %02x\n", uart_rx_byte);
 
 	if ( (rx_time_interval_counter > MAX_TIME_BETWEEN_MODBUS_FRAMES_US) && (!rs485_rx_buffer_empty()) )
 	{
@@ -701,7 +704,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 			}
 			else
 			{
-				printf ("ERROR, cannot get byte to buffer (buffer full)\n");
+				PRINT_ERROR("ERROR, cannot get byte to buffer (buffer full)\n");
 			}
 		}
 	}
@@ -710,7 +713,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	HAL_StatusTypeDef status = HAL_UART_Receive_IT(&huart1, &uart_rx_byte, 1);
 	if (status != HAL_OK)
 	{
-	  printf ("ERROR, cannot start HAL_UART_Transmit_IT\n");
+		PRINT_ERROR("ERROR, cannot start HAL_UART_Transmit_IT\n");
 	}
 }
 

@@ -29,6 +29,12 @@ void drive_fans(channel_t * channel_array, uint8_t array_size, uint32_t gate_pul
 			set_gate_state(&(channel_array[i]), GATE_IDLE);
 		}
 	}
+
+//	//FOR DEBUG PURPOSES ONLY : TOGGLING PIN
+//	if (channel_array[0].state == GATE_IDLE)
+//		set_gate_state(&(channel_array[0]), GATE_ACTIVE);
+//	else
+//		set_gate_state(&(channel_array[0]), GATE_IDLE);
 }
 
 
