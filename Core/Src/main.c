@@ -19,6 +19,10 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
+
 #include <stdbool.h>
 #include <math.h>
 #include <config.h>
@@ -26,10 +30,6 @@
 #include <rs485.h>
 #include <modbus.h>
 #include <gate_driver.h>
-
-
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
 
@@ -51,10 +51,11 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-/* Peripheral handler variables */
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
+
 TIM_HandleTypeDef htim2;
+
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
@@ -91,8 +92,9 @@ static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM2_Init(void);
-extern void initialise_monitor_handles(void);
 /* USER CODE BEGIN PFP */
+
+extern void initialise_monitor_handles(void);
 
 /* FUNCTION PROTOTYPES */
 
@@ -251,33 +253,33 @@ void update_app_data(void)
   */
 int main(void)
 {
-	/* USER CODE BEGIN 1 */
+  /* USER CODE BEGIN 1 */
 
-	/* USER CODE END 1 */
+  /* USER CODE END 1 */
 
-	/* MCU Configuration--------------------------------------------------------*/
+  /* MCU Configuration--------------------------------------------------------*/
 
-	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-	HAL_Init();
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
 
-	/* USER CODE BEGIN Init */
+  /* USER CODE BEGIN Init */
 	initialise_monitor_handles(); // needed for debug semihosting
 
-	/* USER CODE END Init */
+  /* USER CODE END Init */
 
-	/* Configure the system clock */
-	SystemClock_Config();
+  /* Configure the system clock */
+  SystemClock_Config();
 
-	/* USER CODE BEGIN SysInit */
-	/* USER CODE END SysInit */
+  /* USER CODE BEGIN SysInit */
+  /* USER CODE END SysInit */
 
-	/* Initialize all configured peripherals */
-	MX_GPIO_Init();
-	MX_DMA_Init();
-	MX_ADC1_Init();
-	MX_USART1_UART_Init();
-	MX_TIM2_Init();
-	/* USER CODE BEGIN 2 */
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_ADC1_Init();
+  MX_USART1_UART_Init();
+  MX_TIM2_Init();
+  /* USER CODE BEGIN 2 */
 
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, 6);
@@ -292,9 +294,10 @@ int main(void)
 		PRINT_ERROR("%s \n", "Error, cannot start HAL_UART_Transmit_IT");
 	}
 
-	/* USER CODE END 2 */
-	/* Infinite loop */
-	/* USER CODE BEGIN WHILE */
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
 
 	PRINT_DEBUG("App is running\n");
   while (1)
@@ -485,7 +488,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE BEGIN TIM2_Init 1 */
 
-  /* USER CODE END TIM2_Init 1 */ // currently set as 100ns (1Meg/100/100 = 100n)
+  /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 99;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
