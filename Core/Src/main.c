@@ -93,11 +93,7 @@ static void MX_ADC1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
-
 extern void initialise_monitor_handles(void);
-
-/* FUNCTION PROTOTYPES */
-
 int16_t pi_regulator(uint8_t channel, int16_t current_temp, int16_t target_temperature);
 void update_working_parameters(void);
 void update_modbus_registers(void);
@@ -532,7 +528,7 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = RS_BAUD_RATE;
+  huart1.Init.BaudRate = 9600;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
