@@ -58,9 +58,9 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define zero_crossing_detection_Pin GPIO_PIN_0
-#define zero_crossing_detection_GPIO_Port GPIOC
-#define zero_crossing_detection_EXTI_IRQn EXTI0_IRQn
+#define zero_crossing_Pin GPIO_PIN_0
+#define zero_crossing_GPIO_Port GPIOC
+#define zero_crossing_EXTI_IRQn EXTI0_IRQn
 #define gate_1_Pin GPIO_PIN_1
 #define gate_1_GPIO_Port GPIOC
 #define gate_2_Pin GPIO_PIN_2
@@ -71,18 +71,12 @@ void Error_Handler(void);
 #define ntc_1_GPIO_Port GPIOA
 #define ntc_2_Pin GPIO_PIN_1
 #define ntc_2_GPIO_Port GPIOA
-#define ntc_3_Pin GPIO_PIN_2
-#define ntc_3_GPIO_Port GPIOA
-#define ntc_4_Pin GPIO_PIN_3
-#define ntc_4_GPIO_Port GPIOA
-#define ntc_5_Pin GPIO_PIN_4
+#define ntc_5_Pin GPIO_PIN_2
 #define ntc_5_GPIO_Port GPIOA
-#define ntc_6_Pin GPIO_PIN_5
-#define ntc_6_GPIO_Port GPIOA
-#define LED_G_Pin GPIO_PIN_12
-#define LED_G_GPIO_Port GPIOD
-#define LED_R_Pin GPIO_PIN_14
+#define LED_R_Pin GPIO_PIN_12
 #define LED_R_GPIO_Port GPIOD
+#define LED_G_Pin GPIO_PIN_14
+#define LED_G_GPIO_Port GPIOD
 #define debug_pin_Pin GPIO_PIN_7
 #define debug_pin_GPIO_Port GPIOC
 #define rs_dir_Pin GPIO_PIN_5
