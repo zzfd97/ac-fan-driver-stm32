@@ -8,9 +8,9 @@
 
 /* DEBUG PRINT CONFIG */
 /* to set debug level define one of available debug level option */
- #define PRINT_LEVEL_NONE
+// #define PRINT_LEVEL_NONE
 // #define PRINT_LEVEL_ERROR
-// #define PRINT_LEVEL_DEBUG
+ #define PRINT_LEVEL_DEBUG
 
 /* WORKING PARAMETERS */
 #define MAIN_TIMER_RESOLUTION_US 100
