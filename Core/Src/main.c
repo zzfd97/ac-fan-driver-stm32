@@ -624,24 +624,12 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
-/**
-  * @brief This function handles EXTI line0 interrupt.
-  */
-// AC zero crossing detection handler
-void EXTI0_IRQHandler(void)
+void zero_crossing_interrupt_handler(void)
 {
-  /* USER CODE BEGIN EXTI0_IRQn 0 */
-
 	if (gate_pulse_delay_counter_us > HALF_SINE_PERIOD_US - 500)
 	{
 		gate_pulse_delay_counter_us = 0;
 	}
-  /* USER CODE END EXTI0_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
-  /* USER CODE BEGIN EXTI0_IRQn 1 */
-
-  /* USER CODE END EXTI0_IRQn 1 */
 }
 
 
