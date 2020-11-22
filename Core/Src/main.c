@@ -109,20 +109,18 @@ void update_working_parameters()
 	HAL_GPIO_TogglePin(GPIOD, LED_G_Pin);
 	ntc_calculate_temperatures(&sensor_values);
 
-	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, ADC_SENSOR_NUMBER); // CHECK HOW TO WAIT ON RESULTS
+	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, ADC_SENSOR_NUMBER);
 
 //	while (adc_results_ready_flag != true)
 //	{
 //		// wait for conversion finished
 //	}
 
-	// PRINT RESULTS - CAREFUL, THIS PRINTS CAUSE LAG TO GATE DRIVING
-	//	PRINT_DEBUG("%s\n", "ADC results ready\n");
-	//	for (int channel = 0; channel < ADC_SENSOR_NUMBER; channel++)
-	//	{
-	//	  PRINT_DEBUG("CH%d val: %d, temp: %d\n", channel, sensor_values.adc_values[channel], sensor_values.temperatures[channel]);
-	//	}
-
+	PRINT_DEBUG("%s\n", "ADC results ready\n");
+	for (int channel = 0; channel < ADC_SENSOR_NUMBER; channel++)
+	{
+	  PRINT_DEBUG("CH%d val: %d, temp: %d\n", channel, sensor_values.adc_values[channel], sensor_values.temperatures[channel]);
+	}
 
 	temperature_error_state = check_temperatures(&sensor_values);
 
@@ -274,25 +272,26 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
-	HAL_TIM_Base_Start_IT(&htim2);
-	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, 6);
+  HAL_TIM_Base_Start_IT(&htim2);
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, 6);
 
-	rs485_init(&huart1);
-	update_working_parameters();
+  rs485_init(&huart1);
+  update_working_parameters();
 
-	// TEMPORARY, START RECEIVING BYTES
-	HAL_StatusTypeDef status = HAL_UART_Receive_IT(&huart1, &uart_rx_byte, 1);
-	if (status != HAL_OK)
-	{
-		PRINT_ERROR("%s \n", "Error, cannot start HAL_UART_Transmit_IT");
-	}
+  // START RECEIVING BYTES
+  HAL_StatusTypeDef status = HAL_UART_Receive_IT(&huart1, &uart_rx_byte, 1);
+  if (status != HAL_OK)
+  {
+  	PRINT_ERROR("%s \n", "Error, cannot start HAL_UART_Transmit_IT");
+  }
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  PRINT_DEBUG("App is running\n");
+  PRINT_DEBUG("Init done. App is running\n");
+
   while (1)
   {
 	if (update_working_parameters_pending_flag == true)
