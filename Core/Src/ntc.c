@@ -95,7 +95,7 @@ int16_t check_temperatures(sensors_t * sensor_array)
 		int16_t temperature = sensor_array->temperatures[i];
 		if ( (temperature > MAX_WORKING_TEMPERATURE) || (temperature < MIN_WORKING_TEMPERATURE) )
 		{
-			PRINT_ERROR("ERROR: temperature out of accepted range\n");
+			log_error("ERROR: temperature out of accepted range");
 			return TEMPERATURE_STATUS_ERROR;
 		}
 	}

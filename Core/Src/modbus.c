@@ -1,7 +1,8 @@
 #include <string.h>
 #include <modbus.h>
 #include <crc.h>
-#include<config.h>
+#include <config.h>
+#include <logger.h>
 
 /* LOCAL DEFINES */
 #define MAX_REGISTERS_OFFSET (REGISTERS_NUMBER-1)
@@ -51,22 +52,22 @@ bool modbus_process_frame(uint8_t * request, uint16_t request_size, uint8_t * re
 	uint16_t crc_received = get_short_little_endian(request+request_size-2);
 	if (crc_calculated != crc_received)
 	{
-		PRINT_ERROR("ERROR: modbus_process_frame, CRC does not match\n");
+//		PRINT_ERROR("ERROR: modbus_process_frame, CRC does not match\n");
 		return false;
 	}
 	
 	switch (request[POSITION_FUNCTION])
 	{
 		case FUNCTION_READ_MULTIPLE:
-			PRINT_DEBUG("Request 0x%02x received, ", FUNCTION_READ_MULTIPLE);
+//			PRINT_DEBUG("Request 0x%02x received, ", FUNCTION_READ_MULTIPLE);
 			asm("NOP"); // needed for turn off compiler warning "a label can only be part of a statement and a declaration is not a statement"
 			uint16_t first_address_offset = get_short_big_endian(request+2);
 			uint16_t registers_number = get_short_big_endian(request+4);
-			PRINT_DEBUG("first register offset: %d, number of registers: %d\n", first_address_offset, registers_number);
+//			PRINT_DEBUG("first register offset: %d, number of registers: %d\n", first_address_offset, registers_number);
 
 			if ( (first_address_offset >= REGISTERS_NUMBER) || (registers_number > REGISTERS_NUMBER) )
 			{
-				PRINT_ERROR("ERROR: modbus_process_frame, requested registers not valid\n");
+//				PRINT_ERROR("ERROR: modbus_process_frame, requested registers not valid\n");
 				return false;
 			}
 
@@ -92,11 +93,11 @@ bool modbus_process_frame(uint8_t * request, uint16_t request_size, uint8_t * re
 			break;
 	
 		case FUNCTION_WRITE_SINGLE:
-			PRINT_DEBUG("Request 0x%02x received, ", FUNCTION_WRITE_SINGLE);
+//			PRINT_DEBUG("Request 0x%02x received, ", FUNCTION_WRITE_SINGLE);
 			asm("NOP"); // needed for turn off compiler warning "a label can only be part of a statement and a declaration is not a statement"
 			uint16_t register_offset = get_short_big_endian(request+2);
 			int16_t value_to_set = get_short_big_endian(request+4);
-			PRINT_DEBUG("setting register with offset %d, value to set: %d\n", register_offset, value_to_set);
+//			PRINT_DEBUG("setting register with offset %d, value to set: %d\n", register_offset, value_to_set);
 
 			if (register_offset > MAX_REGISTERS_OFFSET)
 			{
@@ -105,7 +106,7 @@ bool modbus_process_frame(uint8_t * request, uint16_t request_size, uint8_t * re
 
 			if (register_offset >= REGISTERS_NUMBER)
 			{
-				PRINT_ERROR("ERROR: modbus_process_frame, requested registers not valid\n");
+//				PRINT_ERROR("ERROR: modbus_process_frame, requested registers not valid\n");
 				return false;
 			}
 
@@ -115,7 +116,7 @@ bool modbus_process_frame(uint8_t * request, uint16_t request_size, uint8_t * re
 			break;
 
 		default:
-			PRINT_ERROR("ERROR: modbus_process_frame, unsupported function detected\n");
+//			PRINT_ERROR("ERROR: modbus_process_frame, unsupported function detected\n");
 			return false;
 	}
 	return true;
@@ -150,7 +151,7 @@ void print_buffer(uint8_t * buffer, uint16_t length)
 {
 	for (int index = 0; index < length; index++)
 	{
-		PRINT_DEBUG("0x%02x | ", *(buffer + index));
+//		PRINT_DEBUG("0x%02x | ", *(buffer + index));
 	}
-	PRINT_DEBUG("\n");
+//	PRINT_DEBUG("\n");
 }

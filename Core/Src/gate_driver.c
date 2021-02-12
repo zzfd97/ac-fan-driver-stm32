@@ -4,6 +4,7 @@
  */
 
 #include <gate_driver.h>
+#include <math.h>
 
 
 void drive_fans(channel_t * channel_array, uint8_t array_size, uint32_t gate_pulse_delay_counter_us)

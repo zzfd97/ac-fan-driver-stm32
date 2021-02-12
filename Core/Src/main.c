@@ -19,17 +19,21 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
 #include <stdbool.h>
 #include <math.h>
+#include <string.h>
 #include <config.h>
 #include <ntc.h>
 #include <rs485.h>
 #include <modbus.h>
 #include <gate_driver.h>
+#include <logger.h>
+
 
 /* USER CODE END Includes */
 
@@ -93,7 +97,7 @@ static void MX_ADC1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
-extern void initialise_monitor_handles(void);
+//extern void initialise_monitor_handles(void);
 int16_t pi_regulator(uint8_t channel, int16_t current_temp, int16_t target_temperature);
 void update_working_parameters(void);
 void update_modbus_registers(void);
@@ -107,7 +111,7 @@ void update_app_data(void);
 
 void update_working_parameters()
 {
-	PRINT_DEBUG("%s", "Updating working parameters\n");
+	log_info("Updating working parameters");
 	HAL_GPIO_TogglePin(GPIOD, LED_G_Pin);
 	ntc_calculate_temperatures(&sensor_values);
 
@@ -118,10 +122,13 @@ void update_working_parameters()
 		// wait for conversion finished
 	}
 
-	PRINT_DEBUG("%s\n", "ADC results ready\n");
+	char info[50];
 	for (int channel = 0; channel < ADC_SENSOR_NUMBER; channel++)
 	{
-	  PRINT_DEBUG("CH%d val: %d, temp: %d\n", channel, sensor_values.adc_values[channel], sensor_values.temperatures[channel]);
+	  memset(info, 0, sizeof(info));
+	  sprintf(info, "CH%d val: %d, temp: %d\n", channel, sensor_values.adc_values[channel], sensor_values.temperatures[channel]);
+	  log_info(info);
+	  HAL_Delay(100); // TODO remove that delay
 	}
 
 	temperature_error_state = check_temperatures(&sensor_values);
@@ -172,7 +179,7 @@ int16_t pi_regulator(uint8_t channel, int16_t current_temp, int16_t setpoint)
 
 void update_modbus_registers(void)
 {
-	PRINT_DEBUG("Updating Modbus registers with data from app before processing request\n");
+	log_info("Updating Modbus registers with data from app before processing request");
 	modbus_set_reg_value(0, channel_array[0].work_state);
 	modbus_set_reg_value(1, channel_array[1].work_state);
 	modbus_set_reg_value(2, channel_array[2].work_state);
@@ -194,7 +201,7 @@ void update_modbus_registers(void)
 
 void update_app_data(void)
 {
-	PRINT_DEBUG("Updating app data with data from Modbus registers\n");
+	log_info("Updating app data with data from Modbus registers");
 	channel_array[0].work_state = modbus_get_reg_value(0);
 	channel_array[1].work_state = modbus_get_reg_value(1);
 	channel_array[2].work_state = modbus_get_reg_value(2);
@@ -256,7 +263,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  initialise_monitor_handles(); // needed for debug semihosting
+//  initialise_monitor_handles(); // needed for debug semihosting
 
   /* USER CODE END Init */
 
@@ -272,6 +279,7 @@ int main(void)
   MX_ADC1_Init();
   MX_USART1_UART_Init();
   MX_TIM2_Init();
+  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
 
   HAL_TIM_Base_Start_IT(&htim2);
@@ -279,12 +287,13 @@ int main(void)
 
   rs485_init(&huart1);
   update_working_parameters();
+  logger_set_level(2);
 
   // START RECEIVING BYTES
   HAL_StatusTypeDef status = HAL_UART_Receive_IT(&huart1, &uart_rx_byte, 1);
   if (status != HAL_OK)
   {
-  	PRINT_ERROR("%s \n", "Error, cannot start HAL_UART_Transmit_IT");
+	  log_error("Error, cannot start HAL_UART_Transmit_IT");
   }
 
   /* USER CODE END 2 */
@@ -292,7 +301,15 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  PRINT_DEBUG("Init done. App is running\n");
+  log_info("Init done. App is running");
+
+//	while(1)
+//	{
+//		HAL_Delay(1000);
+//		HAL_GPIO_TogglePin(GPIOD, LED_G_Pin);
+//		log_info("helo 1");
+//		log_info("helo 2");
+//	}
 
   while (1)
   {
@@ -339,15 +356,14 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = 8;
-  RCC_OscInitStruct.PLL.PLLN = 100;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 4;
+  RCC_OscInitStruct.PLL.PLLN = 72;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 8;
+  RCC_OscInitStruct.PLL.PLLQ = 3;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -361,7 +377,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -387,7 +403,7 @@ static void MX_ADC1_Init(void)
   /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
   */
   hadc1.Instance = ADC1;
-  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
   hadc1.Init.Resolution = ADC_RESOLUTION_10B;
   hadc1.Init.ScanConvMode = ENABLE;
   hadc1.Init.ContinuousConvMode = DISABLE;
@@ -547,7 +563,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, gate_1_Pin|gate_2_Pin|gate_3_Pin|debug_pin_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, LED_R_Pin|LED_G_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOD, LED_G_Pin|LED_R_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(rs_dir_GPIO_Port, rs_dir_Pin, GPIO_PIN_RESET);
@@ -565,8 +581,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LED_R_Pin LED_G_Pin */
-  GPIO_InitStruct.Pin = LED_R_Pin|LED_G_Pin;
+  /*Configure GPIO pins : LED_G_Pin LED_R_Pin */
+  GPIO_InitStruct.Pin = LED_G_Pin|LED_R_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -623,34 +639,31 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 /* ADC conversion finished callback */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
-	PRINT_DEBUG("%s\n", "HAL_ADC_ConvCpltCallback");
+	log_debug("HAL_ADC_ConvCpltCallback");
 	adc_results_ready_flag = true;
 }
 
 /* UART RX finished callback */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	PRINT_DEBUG("Serial received a byte: %02x\n", uart_rx_byte);
+//	log_debug("Serial received a byte: %02x\n", uart_rx_byte);
 
-	if ( (rx_time_interval_counter > MAX_TIME_BETWEEN_MODBUS_FRAMES_US) && (!rs485_rx_buffer_empty()) )
+	if (modbus_request_pending_flag == true)
 	{
-		rs485_get_complete_frame(incoming_modbus_frame, RS_RX_BUFFER_SIZE);
-		modbus_request_pending_flag = true;
+		return;
 	}
 	else
 	{
 		rx_time_interval_counter = 0;
 
-		if (modbus_request_pending_flag == false)
+		if (rs485_collect_byte_to_buffer(&uart_rx_byte) && (modbus_frame_byte_counter < RS_RX_BUFFER_SIZE))
 		{
-			if (rs485_collect_byte_to_buffer(&uart_rx_byte))
-			{
-				modbus_frame_byte_counter++;
-			}
-			else
-			{
-				PRINT_ERROR("ERROR, cannot get byte to buffer (buffer full)\n");
-			}
+			modbus_frame_byte_counter++;
+		}
+		else
+		{
+			log_error("ERROR, cannot get byte to buffer (buffer full)");
+			modbus_frame_byte_counter = 0;
 		}
 	}
 
@@ -658,7 +671,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	HAL_StatusTypeDef status = HAL_UART_Receive_IT(&huart1, &uart_rx_byte, 1);
 	if (status != HAL_OK)
 	{
-		PRINT_ERROR("ERROR, cannot start HAL_UART_Transmit_IT\n");
+		log_error("ERROR, cannot start HAL_UART_Transmit_IT");
 	}
 }
 

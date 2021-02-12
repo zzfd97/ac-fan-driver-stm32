@@ -6,12 +6,6 @@
 #define ADC_SENSOR_NUMBER 3
 #define OUTPUT_CHANNELS_NUMBER 3
 
-/* DEBUG PRINT CONFIG */
-/* to set debug level define one of available debug level option */
-// #define PRINT_LEVEL_NONE
-// #define PRINT_LEVEL_ERROR
- #define PRINT_LEVEL_DEBUG
-
 /* WORKING PARAMETERS */
 #define MAIN_TIMER_RESOLUTION_US 100
 #define GATE_PULSE_MIN_TIME_US 100
@@ -43,17 +37,5 @@
 #define HALF_SINE_PERIOD_US 10000 // constant for 50Hz AC voltage
 #define VOLTAGE_PRECISION_MULTIPLIER 10
 #define TEMPERATURE_PRECISION_MULTIPLIER 10
-
-/* DEBUG PRINT DEFINES */
-#if defined(PRINT_LEVEL_DEBUG)
-# define PRINT_DEBUG printf
-# define PRINT_ERROR printf
-#elif defined(PRINT_LEVEL_ERROR)
-# define PRINT_DEBUG(fmt, args...)
-# define PRINT_ERROR printf
-#elif defined(PRINT_LEVEL_NONE)
-# define PRINT_DEBUG(fmt, args...)
-# define PRINT_ERROR(fmt, args...)
-#endif
 
 #endif /* CONFIG_H_ */
