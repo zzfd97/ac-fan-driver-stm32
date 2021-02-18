@@ -51,7 +51,7 @@ void rs485_transmit_byte_array(uint8_t * byte_array, uint16_t array_size)
 	HAL_StatusTypeDef status = HAL_UART_Transmit(uart_handler, byte_array, array_size, 100); // must be blocking, as array is passed by pointer
 	if (status != HAL_OK)
 	{
-		log_error("Cannot send buffer");
+		log_usb(LEVEL_ERROR, "Cannot send buffer");
 	}
 	transmitter_disable(); // disable DIR pin after transmission is finished
 }

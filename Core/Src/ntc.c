@@ -1,5 +1,6 @@
 #include <ntc.h>
 #include <config.h>
+#include <logger.h>
 
 /* STATIC FUNCTIONS DECLARATIONS */
 /* converts 10bit ADC read value to temperature in Celsius degree */
@@ -95,7 +96,7 @@ int16_t check_temperatures(sensors_t * sensor_array)
 		int16_t temperature = sensor_array->temperatures[i];
 		if ( (temperature > MAX_WORKING_TEMPERATURE) || (temperature < MIN_WORKING_TEMPERATURE) )
 		{
-			log_error("ERROR: temperature out of accepted range");
+			log_usb(LEVEL_ERROR, "ERROR: temperature out of accepted range\n\r");
 			return TEMPERATURE_STATUS_ERROR;
 		}
 	}

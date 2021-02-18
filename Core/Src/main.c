@@ -111,7 +111,7 @@ void update_app_data(void);
 
 void update_working_parameters()
 {
-	log_info("Updating working parameters");
+	log_usb(LEVEL_INFO, "Updating working parameters\n\r");
 	HAL_GPIO_TogglePin(GPIOD, LED_G_Pin);
 	ntc_calculate_temperatures(&sensor_values);
 
@@ -122,12 +122,9 @@ void update_working_parameters()
 		// wait for conversion finished
 	}
 
-	char info[50];
 	for (int channel = 0; channel < ADC_SENSOR_NUMBER; channel++)
 	{
-	  memset(info, 0, sizeof(info));
-	  sprintf(info, "CH%d val: %d, temp: %d\n", channel, sensor_values.adc_values[channel], sensor_values.temperatures[channel]);
-	  log_info(info);
+	  log_usb(LEVEL_INFO, "CH%d val: %d, temp: %d\n\r", channel, sensor_values.adc_values[channel], sensor_values.temperatures[channel]);
 	  HAL_Delay(100); // TODO remove that delay
 	}
 
@@ -179,7 +176,7 @@ int16_t pi_regulator(uint8_t channel, int16_t current_temp, int16_t setpoint)
 
 void update_modbus_registers(void)
 {
-	log_info("Updating Modbus registers with data from app before processing request");
+	log_usb(LEVEL_INFO, "Updating Modbus registers with data from app before processing request\n\r");
 	modbus_set_reg_value(0, channel_array[0].work_state);
 	modbus_set_reg_value(1, channel_array[1].work_state);
 	modbus_set_reg_value(2, channel_array[2].work_state);
@@ -201,7 +198,7 @@ void update_modbus_registers(void)
 
 void update_app_data(void)
 {
-	log_info("Updating app data with data from Modbus registers");
+	log_usb(LEVEL_INFO, "Updating app data with data from Modbus registers\n\r");
 	channel_array[0].work_state = modbus_get_reg_value(0);
 	channel_array[1].work_state = modbus_get_reg_value(1);
 	channel_array[2].work_state = modbus_get_reg_value(2);
@@ -293,7 +290,7 @@ int main(void)
   HAL_StatusTypeDef status = HAL_UART_Receive_IT(&huart1, &uart_rx_byte, 1);
   if (status != HAL_OK)
   {
-	  log_error("Error, cannot start HAL_UART_Transmit_IT");
+	  log_usb(LEVEL_ERROR, "Error, cannot start HAL_UART_Transmit_IT\n\r");
   }
 
   /* USER CODE END 2 */
@@ -301,14 +298,14 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  log_info("Init done. App is running");
+  log_usb(LEVEL_INFO, "Init done. App is running\n\r");
 
+// for debug only
 //	while(1)
 //	{
 //		HAL_Delay(1000);
 //		HAL_GPIO_TogglePin(GPIOD, LED_G_Pin);
-//		log_info("helo 1");
-//		log_info("helo 2");
+//		log_usb(LEVEL_INFO, "Number %d logged\n\r", 19);
 //	}
 
   while (1)
@@ -639,14 +636,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 /* ADC conversion finished callback */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
-	log_debug("HAL_ADC_ConvCpltCallback");
+	log_usb(LEVEL_DEBUG, "HAL_ADC_ConvCpltCallback\n\r");
 	adc_results_ready_flag = true;
 }
 
 /* UART RX finished callback */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-//	log_debug("Serial received a byte: %02x\n", uart_rx_byte);
+	log_usb(LEVEL_DEBUG, "Serial received a byte: %02x\n\r", uart_rx_byte);
 
 	if (modbus_request_pending_flag == true)
 	{
@@ -662,7 +659,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		}
 		else
 		{
-			log_error("ERROR, cannot get byte to buffer (buffer full)");
+			log_usb(LEVEL_ERROR, "ERROR, cannot get byte to buffer (buffer full)\n\r");
 			modbus_frame_byte_counter = 0;
 		}
 	}
@@ -671,7 +668,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	HAL_StatusTypeDef status = HAL_UART_Receive_IT(&huart1, &uart_rx_byte, 1);
 	if (status != HAL_OK)
 	{
-		log_error("ERROR, cannot start HAL_UART_Transmit_IT");
+		log_usb(LEVEL_ERROR, "ERROR, cannot start HAL_UART_Transmit_IT\n\r");
 	}
 }
 
@@ -707,7 +704,7 @@ void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
-     tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+     tex: printf("Wrong parameters value: file %s on line %d\r\n\r", file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

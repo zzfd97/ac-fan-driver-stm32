@@ -1,9 +1,8 @@
 #include "usbd_cdc_if.h"
 #include <logger.h>
 #include <string.h>
-
-/* PRIVATE METHOD */
-void log_usb(char * string_buffer);
+#include <stdarg.h>
+#include <stdio.h>
 
 enum log_level_type level;
 
@@ -17,52 +16,28 @@ uint8_t get_level()
 	return (uint8_t)level;
 }
 
-void log_error(char * string_buffer)
+void log_usb(int8_t log_level, char * format, ...)
 {
-	if (get_level() >= LEVEL_ERROR)
+	if (get_level() < log_level)
 	{
-		log_usb(string_buffer);
+		return;
 	}
-}
+	uint8_t max_string_len = 100;
+	char string_buffer[max_string_len];
 
-void log_info(char * string_buffer)
-{
-	if (get_level() >= LEVEL_INFO)
-	{
-		log_usb(string_buffer);
-	}
-}
+	// create string from format and arguments
+	va_list argptr;
+	va_start(argptr, format);
+	vsnprintf(string_buffer, max_string_len, format, argptr);
+	va_end(argptr);
 
-void log_debug(char * string_buffer)
-{
-	if (get_level() == LEVEL_DEBUG)
-	{
-		log_usb(string_buffer);
-	}
-}
-
-void log_usb(char * string_buffer)
-{
-	const uint16_t max_string_size = 100;
+	// send data
 	const int max_retries = 1000;
-	const uint8_t line_ending[] = {'\n', '\r'};
-
-	uint8_t string_size = strlen(string_buffer);
-
-	if (string_size > max_string_size)
-	{
-		string_size = max_string_size;
-	}
-
-	uint8_t output_buffer[string_size+2];
-	memcpy(output_buffer, string_buffer, string_size);
-	memcpy(output_buffer+string_size, line_ending, 2);
-
-	int result = 1;
+	int transmit_result = 1;
 	int retries = 0;
-	while (result != 0 && retries < max_retries)
+	while (transmit_result != 0 && retries < max_retries)
 	{
-		result = CDC_Transmit_FS((uint8_t*)output_buffer, sizeof(output_buffer));
+		transmit_result = CDC_Transmit_FS((uint8_t*)string_buffer, strlen(string_buffer));
 		retries++;
 	}
 }
