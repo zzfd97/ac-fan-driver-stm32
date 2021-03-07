@@ -4,7 +4,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-enum log_level_type level;
+enum log_level_type level = LEVEL_INFO;
 
 void logger_set_level(int8_t level_to_set)
 {

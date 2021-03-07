@@ -97,7 +97,6 @@ static void MX_ADC1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
-//extern void initialise_monitor_handles(void);
 int16_t pi_regulator(uint8_t channel, int16_t current_temp, int16_t target_temperature);
 void update_working_parameters(void);
 void update_modbus_registers(void);
@@ -260,7 +259,6 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-//  initialise_monitor_handles(); // needed for debug semihosting
 
   /* USER CODE END Init */
 

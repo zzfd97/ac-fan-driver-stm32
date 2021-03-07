@@ -36,7 +36,7 @@ int16_t modbus_get_reg_value(uint16_t offset);
  * @param request_size Size of frame to process (in bytes)
  * @param response Pointer to buffer where Modbus response will be written
  * @param response_size Pointer to variable where size of Modbus response (in bytes) will be written
- * @return Value of given register
+ * @return return value (False if error occured)
  */
 bool modbus_process_frame(uint8_t * request, uint16_t request_size, uint8_t * response, uint16_t * response_size);
 
