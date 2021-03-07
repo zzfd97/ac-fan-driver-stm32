@@ -30,7 +30,7 @@
 /* RS485 PARAMETERS */
 #define RS_TX_BUFFER_SIZE 100
 #define RS_RX_BUFFER_SIZE 50
-#define MAX_TIME_BETWEEN_MODBUS_FRAMES_US 4500 //((1000000/RS_BAUD_RATE)*11*4) //>((1000000/RS_BAUD_RATE)*11*4) //min 3.5 char between messages
+#define MAX_TIME_BETWEEN_FRAMES_US 4500 //((1000000/RS_BAUD_RATE)*11*4) //>((1000000/RS_BAUD_RATE)*11*4) //min 3.5 char between messages
 
 /* CONSTANTS */
 #define PI (3.14)
