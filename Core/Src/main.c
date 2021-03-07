@@ -112,13 +112,19 @@ void update_working_parameters()
 {
 	log_usb(LEVEL_INFO, "Updating working parameters\n\r");
 	HAL_GPIO_TogglePin(GPIOD, LED_G_Pin);
-	ntc_calculate_temperatures(&sensor_values);
+
+	sensor_values.temperatures[0] = ntc_to_temperature(sensor_values.adc_values[0]);
+	sensor_values.temperatures[1] = ntc_to_temperature(sensor_values.adc_values[1]);
+	sensor_values.temperatures[2] = ntc_to_temperature(sensor_values.adc_values[2]);
+	sensor_values.temperatures[3] = ntc_to_temperature(sensor_values.adc_values[3]);
+	sensor_values.temperatures[4] = ntc_to_temperature(sensor_values.adc_values[4]);
+	sensor_values.temperatures[5] = pt100_to_temperature(sensor_values.adc_values[5]);
 
 	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, ADC_SENSOR_NUMBER);
 
 	while (adc_results_ready_flag != true)
 	{
-		// wait for conversion finished
+		// wait for conversion finished, TODO change that, bad design
 	}
 
 	for (int channel = 0; channel < ADC_SENSOR_NUMBER; channel++)
@@ -127,7 +133,7 @@ void update_working_parameters()
 	  HAL_Delay(100); // TODO remove that delay
 	}
 
-	temperature_error_state = check_temperatures(&sensor_values);
+	temperature_error_state = check_for_error(&sensor_values);
 
 	for (uint8_t i = 0; i < OUTPUT_CHANNELS_NUMBER; i++)
 	{
@@ -297,6 +303,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 
   log_usb(LEVEL_INFO, "Init done. App is running\n\r");
+
+  // Init sensor presence data
+  sensor_values.connected_status[0] = true; // always connected internally
+  sensor_values.connected_status[1] = true; // always connected internally
+  sensor_values.connected_status[2] = true; // always connected internally
+//  sensor_values->connected_status[3] = HAL_GPIO_ReadPin(; // get connected status from configurable switch
+//  sensor_values->connected_status[4] = HAL_GPIO_ReadPin(; // get connected status from configurable switch
+//  sensor_values->connected_status[5] = HAL_GPIO_ReadPin(; // get connected status from configurable switch
 
 // for debug only
 //	while(1)
@@ -583,6 +597,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : TS4_sensor_connected_Pin TS5_sensor_connected_Pin TS6_sensor_connected_Pin */
+  GPIO_InitStruct.Pin = TS4_sensor_connected_Pin|TS5_sensor_connected_Pin|TS6_sensor_connected_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
   /*Configure GPIO pin : rs_dir_Pin */
   GPIO_InitStruct.Pin = rs_dir_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -624,7 +644,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		}
 	}
 
-	if ( (rx_time_interval_counter > MAX_TIME_BETWEEN_MODBUS_FRAMES_US) && (!rs485_rx_buffer_empty()) )
+	if ( (rx_time_interval_counter > MAX_TIME_BETWEEN_FRAMES_US) && (!rs485_rx_buffer_empty()) )
 	{
 		rs485_get_complete_frame(incoming_modbus_frame, RS_RX_BUFFER_SIZE);
 		modbus_request_pending_flag = true;
