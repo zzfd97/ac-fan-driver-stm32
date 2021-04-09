@@ -85,16 +85,17 @@ int16_t pt100_to_temperature(uint16_t adc_value){
 };
 
 
-uint16_t check_for_error(sensors_t * sensor_array)
+int16_t check_for_error(sensors_t * sensor_array)
 {
-	uint8_t ret_val = 0;
+	int16_t ret_val = 0;
 	for (uint8_t i = 0; i < ADC_SENSOR_NUMBER; i++)
 	{
 		int16_t temperature = sensor_array->temperatures[i];
 		// check if sensor is set as connected and if temperature read is unexpected.
 		if ((temperature < MIN_WORKING_TEMPERATURE) || (temperature > MAX_WORKING_TEMPERATURE))
 		{
-			if (sensor_array->connected_status[i]) // sensor is configured as connected but temperature read is incorrect, set alert
+			// if sensor is configured as connected but temperature read is incorrect, modify return value to indicate error
+			if (sensor_array->connected_status[i])
 			{
 				log_usb(LEVEL_ERROR, "ERROR: temperature on channel %d out of range\n\r", i); // TODO be consistent with numbering first channel as '0' or '1'
 				ret_val |= 1 << i; // if error is detected on given 'i' channel, set proper bit to 1 to indicate error on that channel

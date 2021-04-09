@@ -79,6 +79,12 @@ void Error_Handler(void);
 #define LED_R_GPIO_Port GPIOD
 #define debug_pin_Pin GPIO_PIN_7
 #define debug_pin_GPIO_Port GPIOC
+#define TS4_sensor_connected_Pin GPIO_PIN_0
+#define TS4_sensor_connected_GPIO_Port GPIOD
+#define TS5_sensor_connected_Pin GPIO_PIN_1
+#define TS5_sensor_connected_GPIO_Port GPIOD
+#define TS6_sensor_connected_Pin GPIO_PIN_2
+#define TS6_sensor_connected_GPIO_Port GPIOD
 #define rs_dir_Pin GPIO_PIN_5
 #define rs_dir_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */

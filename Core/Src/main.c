@@ -75,7 +75,7 @@ uint32_t gate_pulse_delay_counter_us = 0;
 uint32_t update_parameter_timer_counter_us = 0;
 uint32_t rx_time_interval_counter = 0;
 sensors_t sensor_values;
-int16_t temperature_error_state = TEMPERATURE_STATUS_NO_ERROR;
+int16_t temperature_error_state = 0;
 uint8_t incoming_modbus_frame[RS_RX_BUFFER_SIZE];
 uint16_t modbus_frame_byte_counter = 0;
 
@@ -297,28 +297,28 @@ int main(void)
 	  log_usb(LEVEL_ERROR, "Error, cannot start HAL_UART_Transmit_IT\n\r");
   }
 
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-
-  log_usb(LEVEL_INFO, "Init done. App is running\n\r");
-
   // Init sensor presence data
   sensor_values.connected_status[0] = true; // always connected internally
   sensor_values.connected_status[1] = true; // always connected internally
   sensor_values.connected_status[2] = true; // always connected internally
-//  sensor_values->connected_status[3] = HAL_GPIO_ReadPin(; // get connected status from configurable switch
-//  sensor_values->connected_status[4] = HAL_GPIO_ReadPin(; // get connected status from configurable switch
-//  sensor_values->connected_status[5] = HAL_GPIO_ReadPin(; // get connected status from configurable switch
+  sensor_values.connected_status[3] = HAL_GPIO_ReadPin(GPIOC, TS4_sensor_connected_Pin); // get connected status from configurable switch
+  sensor_values.connected_status[4] = HAL_GPIO_ReadPin(GPIOC, TS5_sensor_connected_Pin); // get connected status from configurable switch
+  sensor_values.connected_status[5] = HAL_GPIO_ReadPin(GPIOC, TS6_sensor_connected_Pin); // get connected status from configurable switch
 
-// for debug only
-//	while(1)
-//	{
-//		HAL_Delay(1000);
-//		HAL_GPIO_TogglePin(GPIOD, LED_G_Pin);
-//		log_usb(LEVEL_INFO, "Number %d logged\n\r", 19);
-//	}
+  log_usb(LEVEL_INFO, "Init done. App is running\n\r");
+
+  // for debug only
+  //	while(1)
+  //	{
+  //		HAL_Delay(1000);
+  //		HAL_GPIO_TogglePin(GPIOD, LED_G_Pin);
+  //		log_usb(LEVEL_INFO, "Number %d logged\n\r", 19);
+  //	}
+
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
 
   while (1)
   {
@@ -600,7 +600,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pins : TS4_sensor_connected_Pin TS5_sensor_connected_Pin TS6_sensor_connected_Pin */
   GPIO_InitStruct.Pin = TS4_sensor_connected_Pin|TS5_sensor_connected_Pin|TS6_sensor_connected_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
   /*Configure GPIO pin : rs_dir_Pin */

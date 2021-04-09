@@ -19,6 +19,7 @@ int16_t pt100_to_temperature(uint16_t adc_value);
 /**
  * Check if temperatures are in accepted range
  * @param offset Number representing offset of given register (for 40001 use 0)
- * @return value: 0 if no error, channel number where error is detected (first in order is returned)
+ * @return value: 0 if no error, or binary representation of channels where error is detected
+ * for example 0b000001 (dec 1) indicates error on sensor with index '0', 0b000100 (dec 4) indicates error on sensor with index '2'
  */
-uint16_t check_for_error(sensors_t * sensor_array);
+int16_t check_for_error(sensors_t * sensor_array);
