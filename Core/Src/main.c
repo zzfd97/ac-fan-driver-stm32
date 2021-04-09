@@ -149,8 +149,18 @@ void update_working_parameters()
 		channel_array[i].activation_delay_us = get_gate_delay_us(channel_array[i].output_voltage_decpercent);
 	}
 
+	// Update sensor presence from user buttons
+	sensors[0].connected_status = true; // always connected internally
+	sensors[1].connected_status = true; // always connected internally
+	sensors[2].connected_status = true; // always connected internally
+	sensors[3].connected_status = (bool)HAL_GPIO_ReadPin(GPIOD, TS4_sensor_connected_Pin);
+	sensors[4].connected_status = (bool)HAL_GPIO_ReadPin(GPIOD, TS5_sensor_connected_Pin);
+	sensors[5].connected_status = (bool)HAL_GPIO_ReadPin(GPIOD, TS6_sensor_connected_Pin);
+
 	update_working_parameters_pending_flag = false;
 	adc_results_ready_flag = false;
+	// start ADC DMA to start read for next update cycle
+	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)dma_adc_array, NON_ISOLATED_SENSOR_NUMBER);
 }
 
 
@@ -302,14 +312,6 @@ int main(void)
 	  log_usb(LEVEL_ERROR, "Error, cannot start HAL_UART_Transmit_IT\n\r");
   }
 
-  // Init sensor presence data
-  sensors[0].connected_status = true; // always connected internally
-  sensors[1].connected_status = true; // always connected internally
-  sensors[2].connected_status = true; // always connected internally
-  sensors[3].connected_status = HAL_GPIO_ReadPin(GPIOC, TS4_sensor_connected_Pin); // get connected status from configurable switch
-  sensors[4].connected_status = HAL_GPIO_ReadPin(GPIOC, TS5_sensor_connected_Pin); // get connected status from configurable switch
-  sensors[5].connected_status = HAL_GPIO_ReadPin(GPIOC, TS6_sensor_connected_Pin); // get connected status from configurable switch
-
   log_usb(LEVEL_INFO, "Init done. App is running\n\r");
 
   // for debug only
@@ -418,7 +420,7 @@ static void MX_ADC1_Init(void)
   */
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
-  hadc1.Init.Resolution = ADC_RESOLUTION_10B;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.ScanConvMode = ENABLE;
   hadc1.Init.ContinuousConvMode = DISABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
@@ -496,7 +498,7 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
   {
@@ -605,7 +607,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pins : TS4_sensor_connected_Pin TS5_sensor_connected_Pin TS6_sensor_connected_Pin */
   GPIO_InitStruct.Pin = TS4_sensor_connected_Pin|TS5_sensor_connected_Pin|TS6_sensor_connected_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
   /*Configure GPIO pin : rs_dir_Pin */
