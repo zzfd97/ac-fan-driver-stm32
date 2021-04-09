@@ -74,7 +74,8 @@ bool modbus_request_pending_flag = false;
 uint32_t gate_pulse_delay_counter_us = 0;
 uint32_t update_parameter_timer_counter_us = 0;
 uint32_t rx_time_interval_counter = 0;
-sensors_t sensor_values;
+sensors_t sensors[TOTAL_SENSOR_NUMBER];
+uint16_t dma_adc_array[ISOLATED_SENSOR_NUMBER];
 int16_t temperature_error_state = 0;
 uint8_t incoming_modbus_frame[RS_RX_BUFFER_SIZE];
 uint16_t modbus_frame_byte_counter = 0;
@@ -113,33 +114,37 @@ void update_working_parameters()
 	log_usb(LEVEL_INFO, "Updating working parameters\n\r");
 	HAL_GPIO_TogglePin(GPIOD, LED_G_Pin);
 
-	sensor_values.temperatures[0] = ntc_to_temperature(sensor_values.adc_values[0]);
-	sensor_values.temperatures[1] = ntc_to_temperature(sensor_values.adc_values[1]);
-	sensor_values.temperatures[2] = ntc_to_temperature(sensor_values.adc_values[2]);
-	sensor_values.temperatures[3] = ntc_to_temperature(sensor_values.adc_values[3]);
-	sensor_values.temperatures[4] = ntc_to_temperature(sensor_values.adc_values[4]);
-	sensor_values.temperatures[5] = pt100_to_temperature(sensor_values.adc_values[5]);
-
-	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, ADC_SENSOR_NUMBER);
-
-	while (adc_results_ready_flag != true)
+	// get real ADC values to sensor_values array (for non-isolated sensors)
+	for (int i = 0; i < NON_ISOLATED_SENSOR_NUMBER; i++)
 	{
-		// wait for conversion finished, TODO change that, bad design
+		sensors[i].adc_value = dma_adc_array[i];
 	}
+	// get real ADC values to sensor_values array (for isolated sensors)
+	sensors[3].adc_value = 0; // TODO get real values
+	sensors[4].adc_value = 0; // TODO get real values
+	sensors[5].adc_value = 0; // TODO get real values
 
-	for (int channel = 0; channel < ADC_SENSOR_NUMBER; channel++)
+	// calculate temperatures from ADC values
+	sensors[0].temperature = ntc_to_temperature(sensors[0].adc_value);
+	sensors[1].temperature = ntc_to_temperature(sensors[0].adc_value);
+	sensors[2].temperature = ntc_to_temperature(sensors[0].adc_value);
+	sensors[3].temperature = ntc_to_temperature(sensors[0].adc_value);
+	sensors[4].temperature = ntc_to_temperature(sensors[0].adc_value);
+	sensors[5].temperature = pt100_to_temperature(sensors[0].adc_value);
+
+	for (int channel = 0; channel < TOTAL_SENSOR_NUMBER; channel++)
 	{
-	  log_usb(LEVEL_INFO, "CH%d val: %d, temp: %d\n\r", channel, sensor_values.adc_values[channel], sensor_values.temperatures[channel]);
+	  log_usb(LEVEL_INFO, "CH%d val: %d, temp: %d\n\r", channel, sensors[channel].adc_value, sensors[channel].temperature);
 	  HAL_Delay(100); // TODO remove that delay
 	}
 
-	temperature_error_state = check_for_error(&sensor_values);
+	temperature_error_state = check_for_error(sensors);
 
 	for (uint8_t i = 0; i < OUTPUT_CHANNELS_NUMBER; i++)
 	{
 		if (channel_array[i].work_state == WORK_STATE_AUTO)
 		{
-			channel_array[i].output_voltage_decpercent = pi_regulator(i, sensor_values.temperatures[i], channel_array[i].setpoint);
+			channel_array[i].output_voltage_decpercent = pi_regulator(i, sensors[i].temperature, channel_array[i].setpoint);
 		}
 		channel_array[i].activation_delay_us = get_gate_delay_us(channel_array[i].output_voltage_decpercent);
 	}
@@ -191,12 +196,12 @@ void update_modbus_registers(void)
 	modbus_set_reg_value(6, channel_array[0].setpoint/TEMPERATURE_PRECISION_MULTIPLIER);
 	modbus_set_reg_value(7, channel_array[1].setpoint/TEMPERATURE_PRECISION_MULTIPLIER);
 	modbus_set_reg_value(8, channel_array[2].setpoint/TEMPERATURE_PRECISION_MULTIPLIER);
-	modbus_set_reg_value(9, sensor_values.temperatures[0]/TEMPERATURE_PRECISION_MULTIPLIER);
-	modbus_set_reg_value(10, sensor_values.temperatures[1]/TEMPERATURE_PRECISION_MULTIPLIER);
-	modbus_set_reg_value(11, sensor_values.temperatures[2]/TEMPERATURE_PRECISION_MULTIPLIER);
-	modbus_set_reg_value(12, sensor_values.temperatures[3]/TEMPERATURE_PRECISION_MULTIPLIER);
-	modbus_set_reg_value(13, sensor_values.temperatures[4]/TEMPERATURE_PRECISION_MULTIPLIER);
-	modbus_set_reg_value(14, sensor_values.temperatures[5]/TEMPERATURE_PRECISION_MULTIPLIER);
+	modbus_set_reg_value(9, sensors[0].temperature/TEMPERATURE_PRECISION_MULTIPLIER);
+	modbus_set_reg_value(10, sensors[1].temperature/TEMPERATURE_PRECISION_MULTIPLIER);
+	modbus_set_reg_value(11, sensors[2].temperature/TEMPERATURE_PRECISION_MULTIPLIER);
+	modbus_set_reg_value(12, sensors[3].temperature/TEMPERATURE_PRECISION_MULTIPLIER);
+	modbus_set_reg_value(13, sensors[4].temperature/TEMPERATURE_PRECISION_MULTIPLIER);
+	modbus_set_reg_value(14, sensors[5].temperature/TEMPERATURE_PRECISION_MULTIPLIER);
 	modbus_set_reg_value(15, temperature_error_state);
 }
 
@@ -284,7 +289,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   HAL_TIM_Base_Start_IT(&htim2);
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)sensor_values.adc_values, 6);
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)dma_adc_array, NON_ISOLATED_SENSOR_NUMBER);
 
   rs485_init(&huart1);
   update_working_parameters();
@@ -298,12 +303,12 @@ int main(void)
   }
 
   // Init sensor presence data
-  sensor_values.connected_status[0] = true; // always connected internally
-  sensor_values.connected_status[1] = true; // always connected internally
-  sensor_values.connected_status[2] = true; // always connected internally
-  sensor_values.connected_status[3] = HAL_GPIO_ReadPin(GPIOC, TS4_sensor_connected_Pin); // get connected status from configurable switch
-  sensor_values.connected_status[4] = HAL_GPIO_ReadPin(GPIOC, TS5_sensor_connected_Pin); // get connected status from configurable switch
-  sensor_values.connected_status[5] = HAL_GPIO_ReadPin(GPIOC, TS6_sensor_connected_Pin); // get connected status from configurable switch
+  sensors[0].connected_status = true; // always connected internally
+  sensors[1].connected_status = true; // always connected internally
+  sensors[2].connected_status = true; // always connected internally
+  sensors[3].connected_status = HAL_GPIO_ReadPin(GPIOC, TS4_sensor_connected_Pin); // get connected status from configurable switch
+  sensors[4].connected_status = HAL_GPIO_ReadPin(GPIOC, TS5_sensor_connected_Pin); // get connected status from configurable switch
+  sensors[5].connected_status = HAL_GPIO_ReadPin(GPIOC, TS6_sensor_connected_Pin); // get connected status from configurable switch
 
   log_usb(LEVEL_INFO, "Init done. App is running\n\r");
 
