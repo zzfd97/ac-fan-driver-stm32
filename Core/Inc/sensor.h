@@ -8,6 +8,7 @@ typedef struct
 	uint16_t adc_value;
 	int16_t temperature;
 	bool connected_status; // true for connected, false for not connected
+	bool error;
 } sensors_t;
 
 /* calculates temperature from adc value */

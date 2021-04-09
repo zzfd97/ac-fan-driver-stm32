@@ -97,10 +97,19 @@ int16_t check_for_error(sensors_t * sensor_array)
 			// if sensor is configured as connected but temperature read is incorrect, modify return value to indicate error
 			if (sensor_array[i].connected_status)
 			{
-				log_usb(LEVEL_ERROR, "ERROR: temperature on channel %d out of range\n\r", i); // TODO be consistent with numbering first channel as '0' or '1'
+				sensor_array[i].error = 1;
 				ret_val |= 1 << i; // if error is detected on given 'i' channel, set proper bit to 1 to indicate error on that channel
 			}
 		}
+		else
+		{
+			sensor_array[i].error = 0;
+		}
+	}
+
+	if (ret_val != 0)
+	{
+		log_usb(LEVEL_ERROR, "ERR: unexpected sensor read\n\r");
 	}
 
 	return ret_val;

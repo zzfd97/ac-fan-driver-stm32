@@ -67,7 +67,6 @@ UART_HandleTypeDef huart1;
 
 /* Flags */
 bool update_working_parameters_pending_flag = false;
-bool adc_results_ready_flag = false;
 bool modbus_request_pending_flag = false;
 
 /* Global variables */
@@ -111,18 +110,26 @@ void update_app_data(void);
 
 void update_working_parameters()
 {
-	log_usb(LEVEL_INFO, "Updating working parameters\n\r");
+	log_usb(LEVEL_INFO, "INF: Updating working parameters\n\r");
 	HAL_GPIO_TogglePin(GPIOD, LED_G_Pin);
 
+	// Update sensor presence from user buttons
+	sensors[0].connected_status = true; // always connected internally
+	sensors[1].connected_status = true; // always connected internally
+	sensors[2].connected_status = true; // always connected internally
+	sensors[3].connected_status = (bool)HAL_GPIO_ReadPin(GPIOD, TS4_sensor_connected_Pin);
+	sensors[4].connected_status = (bool)HAL_GPIO_ReadPin(GPIOD, TS5_sensor_connected_Pin);
+	sensors[5].connected_status = (bool)HAL_GPIO_ReadPin(GPIOD, TS6_sensor_connected_Pin);
+
 	// get real ADC values to sensor_values array (for non-isolated sensors)
-	for (int i = 0; i < NON_ISOLATED_SENSOR_NUMBER; i++)
+	for (int i = 0; i < TOTAL_SENSOR_NUMBER; i++)
 	{
 		sensors[i].adc_value = dma_adc_array[i];
 	}
 	// get real ADC values to sensor_values array (for isolated sensors)
-	sensors[3].adc_value = 0; // TODO get real values
-	sensors[4].adc_value = 0; // TODO get real values
-	sensors[5].adc_value = 0; // TODO get real values
+	sensors[3].adc_value = 0; // TODO get real value from SPI ADC
+	sensors[4].adc_value = 0; // TODO get real value from SPI ADC
+	sensors[5].adc_value = 0; // TODO get real value from SPI ADC
 
 	// calculate temperatures from ADC values
 	sensors[0].temperature = ntc_to_temperature(sensors[0].adc_value);
@@ -131,14 +138,13 @@ void update_working_parameters()
 	sensors[3].temperature = ntc_to_temperature(sensors[0].adc_value);
 	sensors[4].temperature = ntc_to_temperature(sensors[0].adc_value);
 	sensors[5].temperature = pt100_to_temperature(sensors[0].adc_value);
+	temperature_error_state = check_for_error(sensors);
 
+	log_usb(LEVEL_INFO, "SEN CH | ADC  | TEMP | USED | ERR |\n\r-------|------|------|------|-----|\n\r");
 	for (int channel = 0; channel < TOTAL_SENSOR_NUMBER; channel++)
 	{
-	  log_usb(LEVEL_INFO, "CH%d val: %d, temp: %d\n\r", channel, sensors[channel].adc_value, sensors[channel].temperature);
-	  HAL_Delay(100); // TODO remove that delay
+	  log_usb(LEVEL_INFO, "     %d | %04d | %04d |  %d   |  %d  |\n\r", channel+1, sensors[channel].adc_value, sensors[channel].temperature, (int)(sensors[channel].connected_status), sensors[channel].error);
 	}
-
-	temperature_error_state = check_for_error(sensors);
 
 	for (uint8_t i = 0; i < OUTPUT_CHANNELS_NUMBER; i++)
 	{
@@ -149,18 +155,13 @@ void update_working_parameters()
 		channel_array[i].activation_delay_us = get_gate_delay_us(channel_array[i].output_voltage_decpercent);
 	}
 
-	// Update sensor presence from user buttons
-	sensors[0].connected_status = true; // always connected internally
-	sensors[1].connected_status = true; // always connected internally
-	sensors[2].connected_status = true; // always connected internally
-	sensors[3].connected_status = (bool)HAL_GPIO_ReadPin(GPIOD, TS4_sensor_connected_Pin);
-	sensors[4].connected_status = (bool)HAL_GPIO_ReadPin(GPIOD, TS5_sensor_connected_Pin);
-	sensors[5].connected_status = (bool)HAL_GPIO_ReadPin(GPIOD, TS6_sensor_connected_Pin);
-
+	log_usb(LEVEL_INFO, "FAN CH | SETPOINT | VOLTAGE | DELAY_US |\n\r-------|----------|---------|----------|\n\r");
+	for (int i = 0; i < OUTPUT_CHANNELS_NUMBER; i++)
+	{
+		log_usb(LEVEL_INFO, "   %d   |    %02d    |   %03d   |    %d   |\n\r", i+1, channel_array[i].setpoint/10, channel_array[i].output_voltage_decpercent/10, channel_array[i].activation_delay_us);
+	}
 	update_working_parameters_pending_flag = false;
-	adc_results_ready_flag = false;
-	// start ADC DMA to start read for next update cycle
-	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)dma_adc_array, NON_ISOLATED_SENSOR_NUMBER);
+	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)dma_adc_array, NON_ISOLATED_SENSOR_NUMBER); 	// start ADC DMA to start read for next update cycle
 }
 
 
@@ -196,7 +197,7 @@ int16_t pi_regulator(uint8_t channel, int16_t current_temp, int16_t setpoint)
 
 void update_modbus_registers(void)
 {
-	log_usb(LEVEL_INFO, "Updating Modbus registers with data from app before processing request\n\r");
+	log_usb(LEVEL_INFO, "INF: Updating Modbus registers with data from app before processing request\n\r");
 	modbus_set_reg_value(0, channel_array[0].work_state);
 	modbus_set_reg_value(1, channel_array[1].work_state);
 	modbus_set_reg_value(2, channel_array[2].work_state);
@@ -218,7 +219,7 @@ void update_modbus_registers(void)
 
 void update_app_data(void)
 {
-	log_usb(LEVEL_INFO, "Updating app data with data from Modbus registers\n\r");
+	log_usb(LEVEL_INFO, "INF: Updating app data with data from Modbus registers\n\r");
 	channel_array[0].work_state = modbus_get_reg_value(0);
 	channel_array[1].work_state = modbus_get_reg_value(1);
 	channel_array[2].work_state = modbus_get_reg_value(2);
@@ -303,16 +304,16 @@ int main(void)
 
   rs485_init(&huart1);
   update_working_parameters();
-  logger_set_level(2);
+  logger_set_level(LEVEL_DEBUG);
 
   // START RECEIVING BYTES
   HAL_StatusTypeDef status = HAL_UART_Receive_IT(&huart1, &uart_rx_byte, 1);
   if (status != HAL_OK)
   {
-	  log_usb(LEVEL_ERROR, "Error, cannot start HAL_UART_Transmit_IT\n\r");
+	  log_usb(LEVEL_ERROR, "ERR: cannot start HAL_UART_Transmit_IT\n\r");
   }
 
-  log_usb(LEVEL_INFO, "Init done. App is running\n\r");
+  log_usb(LEVEL_INFO, "INF: Init done. App is running\n\r");
 
   // for debug only
   //	while(1)
@@ -343,10 +344,15 @@ int main(void)
 		{
 			rs485_transmit_byte_array(response_buffer, response_size);
 		}
+		else
+		{
+			log_usb(LEVEL_ERROR, "ERR: cannot process Modbus frame\n\r");
+		}
 		update_app_data(); // update app with new data from processed Modbus frame (needed if it was write command)
 
 		modbus_request_pending_flag = false;
 		modbus_frame_byte_counter = 0;
+		memset(incoming_modbus_frame, 0, sizeof(incoming_modbus_frame)); // clear buffer
 	}
 
     /* USER CODE END WHILE */
@@ -661,8 +667,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 /* ADC conversion finished callback */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
-	log_usb(LEVEL_DEBUG, "HAL_ADC_ConvCpltCallback\n\r");
-	adc_results_ready_flag = true;
+	log_usb(LEVEL_DEBUG, "DBG: HAL_ADC_ConvCpltCallback\n\r");
 }
 
 /* UART RX finished callback */
@@ -684,7 +689,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		}
 		else
 		{
-			log_usb(LEVEL_ERROR, "ERROR, cannot get byte to buffer (buffer full)\n\r");
+			log_usb(LEVEL_ERROR, "ERR: cannot get byte to buffer (buffer full)\n\r");
 			modbus_frame_byte_counter = 0;
 		}
 	}
@@ -693,7 +698,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	HAL_StatusTypeDef status = HAL_UART_Receive_IT(&huart1, &uart_rx_byte, 1);
 	if (status != HAL_OK)
 	{
-		log_usb(LEVEL_ERROR, "ERROR, cannot start HAL_UART_Transmit_IT\n\r");
+		log_usb(LEVEL_ERROR, "ERR, cannot start HAL_UART_Transmit_IT\n\r");
 	}
 }
 
