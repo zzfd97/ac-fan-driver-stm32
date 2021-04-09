@@ -9,6 +9,7 @@
 // logger_set_level(LEVEL_ERROR); // set log level first
 // log_usb(LEVEL_ERROR, "Error code: %d\n\r", err_code);
 
+#include "stm32f4xx_hal.h"
 
 enum log_level_type {LEVEL_NONE = 0, LEVEL_ERROR = 1, LEVEL_INFO = 2, LEVEL_DEBUG = 3};
 

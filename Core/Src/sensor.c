@@ -1,6 +1,6 @@
-#include <ntc.h>
 #include <config.h>
 #include <logger.h>
+#include <sensor.h>
 
 /* STATIC FUNCTIONS DECLARATIONS */
 /* converts 10bit ADC read value to temperature in Celsius degree */

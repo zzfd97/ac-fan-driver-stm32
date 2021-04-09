@@ -28,11 +28,11 @@
 #include <math.h>
 #include <string.h>
 #include <config.h>
-#include <ntc.h>
 #include <rs485.h>
 #include <modbus.h>
 #include <gate_driver.h>
 #include <logger.h>
+#include <sensor.h>
 
 
 /* USER CODE END Includes */
