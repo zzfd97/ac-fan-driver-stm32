@@ -36,9 +36,9 @@ bool rs485_collect_byte_to_buffer(uint8_t * byte)
 }
 
 
-void rs485_get_complete_frame(uint8_t * dest_array, uint8_t array_size)
+void rs485_get_frame(uint8_t * where_to_write, uint8_t array_size)
 {
-	memcpy(dest_array, uart_rx_buffer, array_size);
+	memcpy(where_to_write, uart_rx_buffer, array_size);
 	memset(uart_rx_buffer, 0, RS_RX_BUFFER_SIZE);
 	rx_buffer_pointer = uart_rx_buffer;
 }
@@ -48,11 +48,13 @@ void rs485_transmit_byte_array(uint8_t * byte_array, uint16_t array_size)
 {
 	transmitter_enable();
 
-	HAL_StatusTypeDef status = HAL_UART_Transmit(uart_handler, byte_array, array_size, 100); // must be blocking, as array is passed by pointer
+	// TODO what should be timeout here?
+	HAL_StatusTypeDef status = HAL_UART_Transmit(uart_handler, byte_array, array_size, 100); // must be blocking, as array is passed by pointer!
 	if (status != HAL_OK)
 	{
-		log_usb(LEVEL_ERROR, "Cannot send buffer");
+		log_usb(LEVEL_ERROR, "ERR: Cannot send buffer");
 	}
+
 	transmitter_disable(); // disable DIR pin after transmission is finished
 }
 

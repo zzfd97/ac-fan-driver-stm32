@@ -8,3 +8,4 @@
 *.map
 >>>>>>> port-files
 *.d
+Debug/objects.list

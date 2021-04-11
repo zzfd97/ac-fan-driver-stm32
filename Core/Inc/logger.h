@@ -13,6 +13,16 @@
 
 enum log_level_type {LEVEL_NONE = 0, LEVEL_ERROR = 1, LEVEL_INFO = 2, LEVEL_DEBUG = 3};
 
+/**
+ * Sets logger level
+ * @param level_to_set: level of logging, must be of from 'log_level_type'
+ */
 void logger_set_level(int8_t level_to_set);
 
-void log_usb(int8_t log_level, char * format, ...);
+/**
+ * Log stream to using USB CDC
+ * @param log_level: logging level
+ * @param format: formatted string
+ * @return 0 if success, non-zero otherwise
+ */
+int log_usb(int8_t log_level, char * format, ...);

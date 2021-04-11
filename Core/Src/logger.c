@@ -16,11 +16,11 @@ uint8_t get_level()
 	return (uint8_t)level;
 }
 
-void log_usb(int8_t log_level, char * format, ...)
+int log_usb(int8_t log_level, char * format, ...)
 {
 	if (get_level() < log_level)
 	{
-		return;
+		return 0;
 	}
 	uint8_t max_string_len = 100;
 	char string_buffer[max_string_len];
@@ -32,12 +32,22 @@ void log_usb(int8_t log_level, char * format, ...)
 	va_end(argptr);
 
 	// send data
-	const int max_retries = 1000;
-	int transmit_result = 1;
+	const int max_retries = 100;
 	int retries = 0;
-	while (transmit_result != 0 && retries < max_retries)
+	while (retries < max_retries)
 	{
-		transmit_result = CDC_Transmit_FS((uint8_t*)string_buffer, strlen(string_buffer));
-		retries++;
+		if (CDC_Transmit_FS((uint8_t*)string_buffer, strlen(string_buffer)) == 0)
+		{
+			return 0;
+		}
+		else
+		{
+			retries++;
+		}
+		if (retries >= max_retries)
+		{
+			return 1;
+		}
 	}
+	return 0;
 }

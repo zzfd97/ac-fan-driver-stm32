@@ -71,12 +71,12 @@ bool modbus_request_pending_flag = false;
 
 /* Global variables */
 uint32_t gate_pulse_delay_counter_us = 0;
-uint32_t update_parameter_timer_counter_us = 0;
+uint32_t update_parameter_counter_us = 0;
 uint32_t rx_time_interval_counter = 0;
 sensors_t sensors[TOTAL_SENSOR_NUMBER];
 uint16_t dma_adc_array[ISOLATED_SENSOR_NUMBER];
 int16_t temperature_error_state = 0;
-uint8_t incoming_modbus_frame[RS_RX_BUFFER_SIZE];
+uint8_t received_modbus_frame[RS_RX_BUFFER_SIZE];
 uint16_t modbus_frame_byte_counter = 0;
 
 static channel_t channel_array[OUTPUT_CHANNELS_NUMBER] = {
@@ -113,7 +113,7 @@ void update_working_parameters()
 	log_usb(LEVEL_INFO, "INF: Updating working parameters\n\r");
 	HAL_GPIO_TogglePin(GPIOD, LED_G_Pin);
 
-	// Update sensor presence from user buttons
+	// Update sensor connected status from user buttons
 	sensors[0].connected_status = true; // always connected internally
 	sensors[1].connected_status = true; // always connected internally
 	sensors[2].connected_status = true; // always connected internally
@@ -122,7 +122,7 @@ void update_working_parameters()
 	sensors[5].connected_status = (bool)HAL_GPIO_ReadPin(GPIOD, TS6_sensor_connected_Pin);
 
 	// get real ADC values to sensor_values array (for non-isolated sensors)
-	for (int i = 0; i < TOTAL_SENSOR_NUMBER; i++)
+	for (int i = 0; i < NON_ISOLATED_SENSOR_NUMBER; i++)
 	{
 		sensors[i].adc_value = dma_adc_array[i];
 	}
@@ -140,12 +140,14 @@ void update_working_parameters()
 	sensors[5].temperature = pt100_to_temperature(sensors[0].adc_value);
 	temperature_error_state = check_for_error(sensors);
 
+	// log sensor data
 	log_usb(LEVEL_INFO, "SEN CH | ADC  | TEMP | USED | ERR |\n\r-------|------|------|------|-----|\n\r");
 	for (int channel = 0; channel < TOTAL_SENSOR_NUMBER; channel++)
 	{
 	  log_usb(LEVEL_INFO, "     %d | %04d | %04d |  %d   |  %d  |\n\r", channel+1, sensors[channel].adc_value, sensors[channel].temperature, (int)(sensors[channel].connected_status), sensors[channel].error);
 	}
 
+	// run PI regulator calculations
 	for (uint8_t i = 0; i < OUTPUT_CHANNELS_NUMBER; i++)
 	{
 		if (channel_array[i].work_state == WORK_STATE_AUTO)
@@ -155,13 +157,14 @@ void update_working_parameters()
 		channel_array[i].activation_delay_us = get_gate_delay_us(channel_array[i].output_voltage_decpercent);
 	}
 
+	// log fan channel data
 	log_usb(LEVEL_INFO, "FAN CH | SETPOINT | VOLTAGE | DELAY_US |\n\r-------|----------|---------|----------|\n\r");
 	for (int i = 0; i < OUTPUT_CHANNELS_NUMBER; i++)
 	{
 		log_usb(LEVEL_INFO, "   %d   |    %02d    |   %03d   |    %d   |\n\r", i+1, channel_array[i].setpoint/10, channel_array[i].output_voltage_decpercent/10, channel_array[i].activation_delay_us);
 	}
 	update_working_parameters_pending_flag = false;
-	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)dma_adc_array, NON_ISOLATED_SENSOR_NUMBER); 	// start ADC DMA to start read for next update cycle
+	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)dma_adc_array, NON_ISOLATED_SENSOR_NUMBER); // start ADC read for next update cycle
 }
 
 
@@ -315,14 +318,6 @@ int main(void)
 
   log_usb(LEVEL_INFO, "INF: Init done. App is running\n\r");
 
-  // for debug only
-  //	while(1)
-  //	{
-  //		HAL_Delay(1000);
-  //		HAL_GPIO_TogglePin(GPIOD, LED_G_Pin);
-  //		log_usb(LEVEL_INFO, "Number %d logged\n\r", 19);
-  //	}
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -330,9 +325,12 @@ int main(void)
 
   while (1)
   {
+	// Modbus request can be waiting if update_working_parameters() is running. Could it be a problem?
+	// Probably no, as a measured execution time of update_working_parameters() execution is around 1ms.
 	if (update_working_parameters_pending_flag == true)
 	{
 		update_working_parameters();
+		log_usb(LEVEL_DEBUG, "DGG: update_working_parameters() execution time in us: %d\n\r", update_parameter_counter_us);
 	}
 
 	if (modbus_request_pending_flag == true)
@@ -340,7 +338,7 @@ int main(void)
 		uint8_t response_buffer[RS_TX_BUFFER_SIZE];
 		uint16_t response_size;
 		update_modbus_registers(); // update Modbus registers with data from app
-		if (modbus_process_frame(incoming_modbus_frame, modbus_frame_byte_counter, response_buffer, &response_size))
+		if (modbus_process_frame(received_modbus_frame, modbus_frame_byte_counter, response_buffer, &response_size))
 		{
 			rs485_transmit_byte_array(response_buffer, response_size);
 		}
@@ -352,7 +350,7 @@ int main(void)
 
 		modbus_request_pending_flag = false;
 		modbus_frame_byte_counter = 0;
-		memset(incoming_modbus_frame, 0, sizeof(incoming_modbus_frame)); // clear buffer
+		memset(received_modbus_frame, 0, sizeof(received_modbus_frame)); // clear buffer
 	}
 
     /* USER CODE END WHILE */
@@ -647,19 +645,19 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		drive_fans(channel_array, OUTPUT_CHANNELS_NUMBER, gate_pulse_delay_counter_us);
 
 		gate_pulse_delay_counter_us += MAIN_TIMER_RESOLUTION_US;
-		update_parameter_timer_counter_us += MAIN_TIMER_RESOLUTION_US;
+		update_parameter_counter_us += MAIN_TIMER_RESOLUTION_US;
 		rx_time_interval_counter += MAIN_TIMER_RESOLUTION_US;
 
-		if(update_parameter_timer_counter_us >= WORKING_PARAMETERS_UPDATE_PERIOD_US)
+		if(update_parameter_counter_us >= WORKING_PARAMETERS_UPDATE_PERIOD_US)
 		{
 			update_working_parameters_pending_flag = true;
-			update_parameter_timer_counter_us = 0;
+			update_parameter_counter_us = 0;
 		}
 	}
 
 	if ( (rx_time_interval_counter > MAX_TIME_BETWEEN_FRAMES_US) && (!rs485_rx_buffer_empty()) )
 	{
-		rs485_get_complete_frame(incoming_modbus_frame, RS_RX_BUFFER_SIZE);
+		rs485_get_frame(received_modbus_frame, RS_RX_BUFFER_SIZE);
 		modbus_request_pending_flag = true;
 	}
 }
@@ -667,7 +665,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 /* ADC conversion finished callback */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
-	log_usb(LEVEL_DEBUG, "DBG: HAL_ADC_ConvCpltCallback\n\r");
+//	 measured ADC read time is about 300us
+//	log_usb(LEVEL_DEBUG, "DBG: HAL_ADC_ConvCpltCallback\n\r");
 }
 
 /* UART RX finished callback */
